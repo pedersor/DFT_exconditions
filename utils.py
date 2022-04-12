@@ -5,6 +5,10 @@ def get_density(r_s):
   return 3 / (4 * np.pi * (r_s**3))
 
 
+def get_r_s(n):
+  return (3 / (4 * np.pi * n))**(1 / 3)
+
+
 def hartree_to_mRy(energy):
   return energy * 2 * 1000
 
@@ -15,6 +19,10 @@ def get_eps_x_unif(n):
 
 def get_grad_n(s, n):
   return s * ((n**(4 / 3)) * 2 * (3 * np.pi**2)**(1 / 3))
+
+
+def get_s(n, grad_n):
+  return grad_n / (2 * (3 * np.pi**2)**(1 / 3) * (n**(4 / 3)))
 
 
 def get_up_dn_density(n, zeta):
