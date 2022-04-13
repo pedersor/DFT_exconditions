@@ -2,6 +2,7 @@ import sys
 
 import pylibxc
 import numpy as np
+import matplotlib.pyplot as plt
 
 # pandas used for convience for data display
 import pandas as pd
@@ -83,28 +84,32 @@ def scan_eps_c_pol(r_s, zeta, s, alpha, config):
   return np.squeeze(scan_c_res['zk'])
 
 
-def scan_eps_x_unpol(r_s, s, alpha):
+def scan_F_x_unpol(r_s, s, alpha):
   """ Gets eps_x^SCAN from (r_s, zeta, s, alpha). config is used
   to specify some example libxc input cases (see cases below). """
 
   scan_x = pylibxc.LibXCFunctional("mgga_x_scan", "unpolarized")
 
-  # obtain libxc inputs
-  n = get_density(r_s)
-  grad_n = get_grad_n(s, n)
-  tau = get_tau(alpha, grad_n, n, zeta=0)
+  m_r_s, m_s, m_alpha = np.meshgrid(r_s, s, alpha, indexing='ij')
+  m_n = get_density(m_r_s)
+  m_eps_x_unif = get_eps_x_unif(m_n)
 
-  # total sigma and tau
-  sigma = np.expand_dims(grad_n.flatten()**2, axis=1)
-  tau = np.expand_dims(tau.flatten(), axis=1)
+  # obtain libxc inputs
+  m_n = get_density(m_r_s)
+  m_grad_n = get_grad_n(m_s, m_n)
+  m_eps_x_unif = get_eps_x_unif(m_n)
+  m_tau = get_tau(m_alpha, m_grad_n, m_n, zeta=0)
 
   inp = {}
-  inp["rho"] = n
-  inp["sigma"] = sigma
-  inp["tau"] = tau
+  inp["rho"] = m_n.flatten()
+  inp["sigma"] = m_grad_n.flatten()**2
+  inp["tau"] = m_tau.flatten()
 
   scan_x_res = scan_x.compute(inp)
-  return np.squeeze(scan_x_res['zk'])
+  scan_eps_x = np.squeeze(scan_x_res['zk'])
+  scan_F_x = scan_eps_x.reshape(m_r_s.shape) / m_eps_x_unif
+
+  return scan_F_x
 
 
 def scan_eps_c_unpol(r_s, s, alpha):
@@ -162,7 +167,53 @@ def pbe_eps_c_pol(r_s, zeta, s, config):
   return np.squeeze(pbe_c_res['zk'])
 
 
-if __name__ == "__main__":
+example = 'scan_Fx_simple'
+
+if example == 'scan_Fx_simple':
+  n = 1
+  tau_unif = (3 / 10) * ((3 * np.pi)**(2 / 3)) * (n**(5 / 3))
+  eps_x_unif = -(3 / (4 * np.pi)) * ((n * 3 * np.pi**2)**(1 / 3))
+
+  scan_x = pylibxc.LibXCFunctional("mgga_x_scan", "unpolarized")
+
+  inp = {}
+  inp["rho"] = [n]
+  inp["sigma"] = [0]
+  inp["tau"] = [tau_unif]
+
+  scan_x_res = scan_x.compute(inp)
+  scan_eps_x = np.squeeze(scan_x_res['zk'])
+  scan_F_x = scan_eps_x / eps_x_unif
+
+  print(scan_F_x)
+
+if example == 'scan_Fx':
+
+  r_s = np.array([1])
+  s = np.linspace(0, 3)
+  alpha = np.array([0, 1, 100])
+
+  f_x = scan_F_x_unpol(r_s, s, alpha)
+
+  # remove dummy r_s dim
+  f_x = np.squeeze(f_x)
+  # swap s and alpha axes for plotting
+  f_x = np.transpose(f_x, [1, 0])
+
+  for a, f_x_plot in zip(alpha, f_x):
+    plt.plot(s, f_x_plot, label=rf'$\alpha = {a}$')
+
+  plt.ylim(bottom=0.75, top=1.5)
+  plt.xlim(left=0, right=3)
+  plt.legend()
+  plt.xlabel("$s$")
+  plt.ylabel(r"$F_x(S, \alpha)$")
+  plt.grid(alpha=0.4)
+  plt.savefig(f'{example}.pdf')
+
+  print()
+
+if example == "scan eps_c":
   """ example. """
 
   r_s = np.array([2])
