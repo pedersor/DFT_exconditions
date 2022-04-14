@@ -30,14 +30,20 @@ def get_up_dn_density(n, zeta):
   n = np.expand_dims(n.flatten(), axis=1)
   zeta = np.expand_dims(zeta.flatten(), axis=1)
 
-  up_density = ((zeta * n) + n) / 2
-  dn_density = (n - (zeta * n)) / 2
+  up_coeff, dn_ceoff = zeta_coeffs(zeta)
+
+  up_density = up_coeff * n
+  dn_density = dn_ceoff * n
   return np.concatenate((up_density, dn_density), axis=1)
+
+
+def zeta_coeffs(zeta):
+  return (1 + zeta) / 2, (1 - zeta) / 2
 
 
 def get_tau(alpha, grad_n, n, zeta):
   tau_w = (grad_n**2) / (8 * n)
-  tau_unif = (3 / 10) * ((3 * np.pi)**(2 / 3)) * (n**(5 / 3))
+  tau_unif = (3 / 10) * ((3 * np.pi**2)**(2 / 3)) * (n**(5 / 3))
   d_s = ((1 + zeta)**(5 / 3) + (1 - zeta)**(5 / 3)) / 2
   tau_unif *= d_s
 
@@ -63,17 +69,12 @@ def scan_eps_c_pol(r_s, zeta, s, alpha, config):
   sigma = np.expand_dims(grad_n.flatten()**2, axis=1)
   tau = np.expand_dims(tau.flatten(), axis=1)
 
-  if config == 0:
-    sigma = np.concatenate((sigma, np.zeros_like(sigma), np.zeros_like(sigma)),
-                           axis=1)
-    tau = np.concatenate((tau, np.zeros_like(tau)), axis=1)
-  elif config == 1:
-    sigma = np.concatenate((np.zeros_like(sigma), np.zeros_like(sigma), sigma),
-                           axis=1)
-    tau = np.concatenate((np.zeros_like(tau), tau), axis=1)
-  elif config == 2:
-    sigma = np.concatenate((sigma / 4, sigma / 4, sigma / 4), axis=1)
-    tau = np.concatenate((tau / 2, tau / 2), axis=1)
+  up_coeff, dn_coeff = zeta_coeffs(zeta)
+
+  sigma = np.concatenate(
+      (up_coeff**2 * sigma, up_coeff * dn_coeff * sigma, dn_coeff**2 * sigma),
+      axis=1)
+  tau = np.concatenate((up_coeff * tau, dn_coeff * tau), axis=1)
 
   inp = {}
   inp["rho"] = n_spin
@@ -167,11 +168,11 @@ def pbe_eps_c_pol(r_s, zeta, s, config):
   return np.squeeze(pbe_c_res['zk'])
 
 
-example = 'scan_Fx_simple'
+example = 'scan eps_c'
 
 if example == 'scan_Fx_simple':
   n = 1
-  tau_unif = (3 / 10) * ((3 * np.pi)**(2 / 3)) * (n**(5 / 3))
+  tau_unif = (3 / 10) * ((3 * np.pi**2)**(2 / 3)) * (n**(5 / 3))
   eps_x_unif = -(3 / (4 * np.pi)) * ((n * 3 * np.pi**2)**(1 / 3))
 
   scan_x = pylibxc.LibXCFunctional("mgga_x_scan", "unpolarized")
@@ -201,7 +202,7 @@ if example == 'scan_Fx':
   f_x = np.transpose(f_x, [1, 0])
 
   for a, f_x_plot in zip(alpha, f_x):
-    plt.plot(s, f_x_plot, label=rf'$\alpha = {a}$')
+    plt.plot(s, f_x_plot, label=f'$\alpha = {a}$')
 
   plt.ylim(bottom=0.75, top=1.5)
   plt.xlim(left=0, right=3)
@@ -246,6 +247,6 @@ if example == "scan eps_c":
   print('libxc result:')
   print(df.to_string(index=False))
 
-  #print("""\n values from my mathematica implementation:
-  #  zeta=0 : -0.0194047
-  #  zeta=1,-1 : -0.010152 """)
+  print("""\n values from my mathematica implementation:
+    zeta=0 : -0.0194047
+    zeta=1,-1 : -0.010152 """)
