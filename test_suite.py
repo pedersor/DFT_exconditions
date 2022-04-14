@@ -65,29 +65,37 @@ def get_sigma(grad_n, zeta):
   return sigma
 
 
+def get_lapl(q, n, zeta):
+  # q is reduced density Laplacian. Eq. 14 in PhysRevA.96.052512
+
+  n = np.expand_dims(n, axis=1)
+  q = np.expand_dims(q, axis=1)
+  zeta = np.expand_dims(zeta, axis=1)
+  lapl = q * 4 * (3 * np.pi**2)**(2 / 3) * (n**(5 / 3))
+
+  up_coeff, dn_ceoff = zeta_coeffs(zeta)
+  up_lapl = up_coeff * lapl
+  dn_lapl = dn_ceoff * lapl
+
+  return np.concatenate((up_lapl, dn_lapl), axis=1)
+
+
 # end defintions ====
 
 
-def mgga_c(func_id, r_s, s, alpha, zeta, q=None):
-
+def lda_c(func_id, r_s, zeta):
   func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
-  # TODO q not None
-  input = (r_s, s, alpha, zeta)
+  input = (r_s, zeta)
   input = (feature.flatten() for feature in input)
-  r_s, s, alpha, zeta = input
+  r_s, zeta = input
 
   # obtain libxc inputs
   n = get_density(r_s)
-  grad_n = get_grad_n(s, n)
   rho = get_up_dn_density(n, zeta)
-  tau = get_tau(alpha, grad_n, n, zeta)
-  sigma = get_sigma(grad_n, zeta)
 
   inp = {}
   inp["rho"] = rho
-  inp["sigma"] = sigma
-  inp["tau"] = tau
 
   func_c_res = func_c.compute(inp)
   eps_c = np.squeeze(func_c_res['zk'])
@@ -119,19 +127,54 @@ def gga_c(func_id, r_s, s, zeta):
   return eps_c
 
 
-def lda_c(func_id, r_s, zeta):
+def mgga_c(func_id, r_s, s, alpha, zeta, q=None):
+
   func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
-  input = (r_s, zeta)
+  input = (r_s, s, alpha, zeta)
   input = (feature.flatten() for feature in input)
-  r_s, zeta = input
+  r_s, s, alpha, zeta = input
 
   # obtain libxc inputs
   n = get_density(r_s)
+  grad_n = get_grad_n(s, n)
   rho = get_up_dn_density(n, zeta)
+  tau = get_tau(alpha, grad_n, n, zeta)
+  sigma = get_sigma(grad_n, zeta)
 
   inp = {}
   inp["rho"] = rho
+  inp["sigma"] = sigma
+  inp["tau"] = tau
+
+  func_c_res = func_c.compute(inp)
+  eps_c = np.squeeze(func_c_res['zk'])
+
+  return eps_c
+
+
+def mgga_c_lapl(func_c, r_s, s, alpha, zeta, q):
+
+  func_c = pylibxc.LibXCFunctional(func_id, "polarized")
+
+  input = (r_s, s, alpha, zeta, q)
+  input = (feature.flatten() for feature in input)
+  r_s, s, alpha, zeta, q = input
+
+  # obtain libxc inputs
+  n = get_density(r_s)
+  grad_n = get_grad_n(s, n)
+  rho = get_up_dn_density(n, zeta)
+  tau = get_tau(alpha, grad_n, n, zeta)
+  sigma = get_sigma(grad_n, zeta)
+
+  lapl = get_lapl(q, n, zeta)
+
+  inp = {}
+  inp["rho"] = rho
+  inp["sigma"] = sigma
+  inp["tau"] = tau
+  inp["lapl"] = lapl
 
   func_c_res = func_c.compute(inp)
   eps_c = np.squeeze(func_c_res['zk'])
@@ -144,10 +187,8 @@ def deriv_check(input, eps_c, tol=1e-5):
   n = get_density(input[0])
   eps_x_unif = get_eps_x_unif(n)
 
-  eps_c = eps_c.reshape(input[0].shape) / eps_x_unif
-  regions = np.diff(eps_c, axis=0)
-
-  print(np.amin(regions))
+  f_c = eps_c.reshape(input[0].shape) / eps_x_unif
+  regions = np.diff(f_c, axis=0)
 
   regions = np.where(regions < -tol, True, False)
   regions = regions.flatten()
@@ -165,58 +206,84 @@ def deriv_check(input, eps_c, tol=1e-5):
   return cond_satisfied, ranges
 
 
-example = 'gga'
+if __name__ == '__main__':
+  example = 'mgga_c_lapl'
 
-if example == 'lda':
-  r_s = np.linspace(0.0001, 2, 5000)
-  zeta = np.linspace(0, 1.0, 50)
+  if example == "mgga_c_lapl":
 
-  input = np.meshgrid(r_s, zeta, indexing='ij')
+    r_s = np.linspace(0.0001, 2, 500)
 
-  eps_c = lda_c("lda_c_pw", *input)
+    r_s = np.linspace(0.0001, 0.1, 50)
 
-  cond_satisfied, ranges = deriv_check(input, eps_c)
+    s = np.linspace(0, 5, 10)
+    alpha = np.linspace(0, 5, 10)
+    zeta = np.linspace(0, 1.0, 10)
+    q = np.linspace(0, 5.0, 50)
 
-  print(cond_satisfied)
-  if ranges is not None:
-    for r in ranges:
-      print(r)
+    input = np.meshgrid(r_s, s, alpha, zeta, q, indexing='ij')
 
-if example == 'gga':
-  r_s = np.linspace(0.001, 2, 500)
+    func_id = "MGGA_C_SCANL"
+    func_c = pylibxc.LibXCFunctional(func_id, "polarized")
+    eps_c = mgga_c_lapl(func_c, *input)
 
-  r_s = np.linspace(0.001, 2, 50)
+    cond_satisfied, ranges = deriv_check(input, eps_c)
 
-  s = np.linspace(0, 5, 50)
-  zeta = np.linspace(0, 1, 50)
+    print(cond_satisfied)
+    if ranges is not None:
+      for r in ranges:
+        print(r)
 
-  input = np.meshgrid(r_s, s, zeta, indexing='ij')
+  if example == 'lda':
+    r_s = np.linspace(0.0001, 2, 5000)
+    zeta = np.linspace(0, 1.0, 50)
 
-  eps_c = gga_c("gga_c_pbe", *input)
+    input = np.meshgrid(r_s, zeta, indexing='ij')
 
-  cond_satisfied, ranges = deriv_check(input, eps_c)
+    eps_c = lda_c("lda_c_pw", *input)
 
-  print(cond_satisfied)
-  if ranges is not None:
-    for r in ranges:
-      print(r)
+    cond_satisfied, ranges = deriv_check(input, eps_c)
 
-if example == "mgga":
+    print(cond_satisfied)
+    if ranges is not None:
+      for r in ranges:
+        print(r)
 
-  r_s = np.linspace(0.0001, 2, 500)
+  if example == 'gga':
+    r_s = np.linspace(0.001, 2, 500)
 
-  r_s = np.linspace(0.0001, 2, 50)
+    r_s = np.linspace(0.001, 2, 50)
 
-  s = np.linspace(0, 5, 50)
-  alpha = np.linspace(0, 5, 50)
-  zeta = np.linspace(0, 1.0, 50)
+    s = np.linspace(0, 5, 50)
+    zeta = np.linspace(0, 1, 50)
 
-  input = np.meshgrid(r_s, s, alpha, zeta, indexing='ij')
+    input = np.meshgrid(r_s, s, zeta, indexing='ij')
 
-  eps_c = mgga_c("mgga_c_scan", *input)
+    eps_c = gga_c("gga_c_pbe", *input)
 
-  cond_satisfied, ranges = deriv_check(input, eps_c)
+    cond_satisfied, ranges = deriv_check(input, eps_c)
 
-  print(cond_satisfied)
-  for r in ranges:
-    print(r)
+    print(cond_satisfied)
+    if ranges is not None:
+      for r in ranges:
+        print(r)
+
+  if example == "mgga":
+
+    r_s = np.linspace(0.0001, 2, 500)
+
+    r_s = np.linspace(0.0001, 0.1, 50)
+
+    s = np.linspace(0, 5, 50)
+    alpha = np.linspace(0, 5, 50)
+    zeta = np.linspace(0, 1.0, 50)
+
+    input = np.meshgrid(r_s, s, alpha, zeta, indexing='ij')
+
+    eps_c = mgga_c("MGGA_C_R2SCAN", *input)
+
+    cond_satisfied, ranges = deriv_check(input, eps_c)
+
+    print(cond_satisfied)
+    if ranges is not None:
+      for r in ranges:
+        print(r)
