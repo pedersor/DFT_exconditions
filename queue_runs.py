@@ -10,13 +10,14 @@ xc_funcs = pylibxc.util.xc_available_functional_names()
 out_dir = Path('out')
 out_dir.mkdir(parents=True, exist_ok=True)
 
-func_types = ['gga_c_', 'mgga_c_']
+func_types = ['mgga_c_']
 
 for func_type in func_types:
   for xc_func in xc_funcs:
+    # filter out 1d and 2d functionals
     if func_type in xc_func and '_1d_' not in xc_func and '_2d_' not in xc_func:
 
-      run_file = 'run_test.py'
+      run_file = '../run_test.py'
       job_file = f'{xc_func}.job'
       with open(out_dir / job_file, "w") as fh:
         # slurm commands
@@ -29,7 +30,7 @@ for func_type in func_types:
             #SBATCH --nodes=1
             #SBATCH --cpus-per-task=8
             #SBATCH --time=10:00:00
-            #SBATCH --mem=16G
+            #SBATCH --mem=32G
 
             ml purge
             ml miniconda/3/own

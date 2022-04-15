@@ -7,8 +7,7 @@ import pylibxc
 
 import test_suite
 
-#xc = sys.argv[1]
-xc = 'mgga_c_m06'
+xc = sys.argv[1]
 func_c = pylibxc.LibXCFunctional(xc, "polarized")
 
 df = {
@@ -28,14 +27,15 @@ if 'mgga_c_' in xc:
 
   if func_c._needs_laplacian:
 
-    r_s = np.linspace(0.001, 2, 10)
-    s = np.linspace(0, 5, 10)
-    zeta = np.linspace(0, 1, 10)
+    # reduce for memory
+    r_s = np.linspace(0.0001, 5, 1000)
+    s = np.linspace(0, 5, 100)
+    zeta = np.linspace(0, 1, 20)
     alpha = np.linspace(0, 5, 10)
-    q = np.linspace(0, 5.0, 50)
+    q = np.linspace(0, 5, 50)
 
     # split up to reduce memory
-    r_s_splits = np.split(r_s, 5)
+    r_s_splits = np.split(r_s, 100)
     cond_satisfied = True
     for r_s_split in r_s_splits:
 
@@ -61,13 +61,14 @@ if 'mgga_c_' in xc:
         df[label] = [[min_range, max_range]]
 
   else:
-    r_s = np.linspace(0.001, 2, 50)
-    s = np.linspace(0, 5, 50)
-    zeta = np.linspace(0, 1, 50)
-    alpha = np.linspace(0, 5, 50)
+
+    r_s = np.linspace(0.0001, 5, 1000)
+    s = np.linspace(0, 5, 100)
+    zeta = np.linspace(0, 1, 20)
+    alpha = np.linspace(0, 5, 100)
 
     # split up to reduce memory
-    r_s_splits = np.split(r_s, 5)
+    r_s_splits = np.split(r_s, 100)
     cond_satisfied = True
     for r_s_split in r_s_splits:
 
@@ -97,9 +98,9 @@ if 'mgga_c_' in xc:
 
 elif 'gga_c_' in xc:
 
-  r_s = np.linspace(0.001, 2, 50)
-  s = np.linspace(0, 5, 50)
-  zeta = np.linspace(0, 1, 50)
+  r_s = np.linspace(0.0001, 5, 2000)
+  s = np.linspace(0, 5, 500)
+  zeta = np.linspace(0, 1, 100)
   input = np.meshgrid(r_s, s, zeta, indexing='ij')
 
   eps_c = test_suite.gga_c(xc, *input)
