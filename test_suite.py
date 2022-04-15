@@ -127,13 +127,13 @@ def gga_c(func_id, r_s, s, zeta):
   return eps_c
 
 
-def mgga_c(func_id, r_s, s, alpha, zeta, q=None):
+def mgga_c(func_id, r_s, s, zeta, alpha, q=None):
 
   func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
-  input = (r_s, s, alpha, zeta)
+  input = (r_s, s, zeta, alpha)
   input = (feature.flatten() for feature in input)
-  r_s, s, alpha, zeta = input
+  r_s, s, zeta, alpha = input
 
   # obtain libxc inputs
   n = get_density(r_s)
@@ -153,13 +153,11 @@ def mgga_c(func_id, r_s, s, alpha, zeta, q=None):
   return eps_c
 
 
-def mgga_c_lapl(func_c, r_s, s, alpha, zeta, q):
+def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
 
-  func_c = pylibxc.LibXCFunctional(func_id, "polarized")
-
-  input = (r_s, s, alpha, zeta, q)
+  input = (r_s, s, zeta, alpha, q)
   input = (feature.flatten() for feature in input)
-  r_s, s, alpha, zeta, q = input
+  r_s, s, zeta, alpha, q = input
 
   # obtain libxc inputs
   n = get_density(r_s)
@@ -198,8 +196,8 @@ def deriv_check(input, eps_c, tol=1e-5):
   if not cond_satisfied:
     # remove first entry
     input = (feature[:-1].flatten() for feature in input)
-    ranges = ((np.amin(feature[regions]), np.amax(feature[regions]))
-              for feature in input)
+    ranges = ([np.amin(feature[regions]),
+               np.amax(feature[regions])] for feature in input)
   else:
     ranges = None
 
@@ -220,7 +218,7 @@ if __name__ == '__main__':
     zeta = np.linspace(0, 1.0, 10)
     q = np.linspace(0, 5.0, 50)
 
-    input = np.meshgrid(r_s, s, alpha, zeta, q, indexing='ij')
+    input = np.meshgrid(r_s, s, zeta, alpha, q, indexing='ij')
 
     func_id = "MGGA_C_SCANL"
     func_c = pylibxc.LibXCFunctional(func_id, "polarized")
@@ -277,7 +275,7 @@ if __name__ == '__main__':
     alpha = np.linspace(0, 5, 50)
     zeta = np.linspace(0, 1.0, 50)
 
-    input = np.meshgrid(r_s, s, alpha, zeta, indexing='ij')
+    input = np.meshgrid(r_s, s, zeta, alpha, indexing='ij')
 
     eps_c = mgga_c("MGGA_C_R2SCAN", *input)
 
