@@ -1,41 +1,78 @@
-import numpy
+import numpy as np
 from pyscf import gto, dft, lib
 from pyscf.dft import numint
 
-mol_hf = gto.M(atom='He 0 0 0', basis='ccpvdz')
-mf_hf = dft.RKS(mol_hf)
-mf_hf.xc = 'hf'
-mf_hf.kernel()
-dm = mf_hf.make_rdm1()
 
-# dummy calculation to get larger range of grids and weights
-mol = gto.M(atom='Be 0 0 0', basis='ccpvdz')
-mf = dft.RKS(mol)
-mf.xc = 'lda,vwn'
-mf.kernel()
-coords = mf.grids.coords
-weights = mf.grids.weights
+def he_check(gams, xc='pbe', xctype='GGA'):
 
-gam = 0.4
-# Use default mesh grids and weights
-scaled_coords = gam * coords
-ao_value = numint.eval_ao(mol_hf, scaled_coords, deriv=2)
-# The first row of rho is electron density, the rest three rows are electron
-# density gradients which are needed for GGA functional
-rho = numint.eval_rho(mol_hf, ao_value, dm, xctype='MGGA')
-rho[0] = (gam**3) * rho[0]
-rho[1:4] = (gam**4) * rho[1:4]
-if rho.ndim > 4:
-  rho[4:] = (gam**5) * rho[4:]
+  mol_hf = gto.M(atom='He 0 0 0', basis='ccpvdz')
+  mf_hf = dft.RKS(mol_hf)
+  mf_hf.xc = 'hf'
+  mf_hf.kernel()
+  dm = mf_hf.make_rdm1()
 
-print(rho.shape)
+  # dummy calculation to get larger range of grids and weights
+  mol = gto.M(atom='Be 0 0 0', basis='ccpvdz')
+  mf = dft.RKS(mol)
+  mf.xc = 'lda,vwn'
+  mf.kernel()
+  coords = mf.grids.coords
+  weights = mf.grids.weights
 
-#ex, vx = dft.libxc.eval_xc('B88', rho)[:2]
-#ec, vc = dft.libxc.eval_xc(',P86', rho)[:2]
+  e_c_gam = []
+  numint_check = []
+  for gam in gams:
 
-ec, vc = dft.libxc.eval_xc(',scan', rho)[:2]
+    # Use default mesh grids and weights
+    scaled_coords = gam * coords
+    ao_value = numint.eval_ao(mol_hf, scaled_coords, deriv=2)
+    # The first row of rho is electron density, the rest three rows are electron
+    # density gradients which are needed for GGA functional
+    rho = numint.eval_rho(mol_hf, ao_value, dm, xctype=xctype)
+    rho[0] = (gam**3) * rho[0]
+    rho[1:4] = (gam**4) * rho[1:4]
+    if rho.shape[0] > 4:
+      rho[4:] = (gam**5) * rho[4:]
 
-print('integral check: %.12f' % numpy.einsum('i,i->', rho[0], weights))
-print('Ec[n_gam] = %.12f' % numpy.einsum('i,i,i->', ec, rho[0], weights))
+    e_c = dft.libxc.eval_xc(f',{xc}', rho)[0]
 
-print()
+    numint_check.append(np.einsum('i,i->', rho[0], weights))
+    e_c_gam.append(np.einsum('i,i,i->', e_c, rho[0], weights))
+
+  # TODO: check numint against nelec
+  print('min numint: ', min(numint_check))
+
+  return e_c_gam
+
+
+if __name__ == '__main__':
+  import matplotlib.pyplot as plt
+
+  title = 'He atom'
+  gams = np.linspace(0.15, 2, num=20)
+
+  Ec_ref = -0.042
+
+  xcs = [
+      ('pbe', 'GGA'),
+      ('P86', 'GGA'),
+      ('lyp', 'GGA'),
+      ('scan', 'MGGA'),
+      ('m05', 'MGGA'),
+      ('m11', 'MGGA'),
+      ('mn15', 'MGGA'),
+  ]
+  for xc, xctype in xcs:
+    e_c_gam = he_check(gams, xc=xc, xctype=xctype)
+    plt.plot(gams, e_c_gam, label=xc)
+
+  plt.plot(gams, Ec_ref * gams, color='black', label='$\gamma E^*_c $')
+  plt.axvline(x=1, alpha=0.4, color='k', linestyle='--')
+
+  plt.legend()
+  plt.title(title)
+  plt.xlabel('$\gamma$')
+  plt.xlim(left=0)
+  plt.ylim(top=0)
+  plt.grid(alpha=0.2)
+  plt.savefig('idk.pdf', bbox_inches='tight')
