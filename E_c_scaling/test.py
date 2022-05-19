@@ -1,6 +1,12 @@
+import sys
+
+sys.path.append('../')
+
 import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
+
+import utils
 
 
 def e_c_check(mol, base_mf, ccsd_mf, gams, xc='pbe', xctype='GGA'):
@@ -20,6 +26,7 @@ def e_c_check(mol, base_mf, ccsd_mf, gams, xc='pbe', xctype='GGA'):
     # The first row of rho is electron density, the rest three rows are electron
     # density gradients which are needed for GGA functional
     rho = numint.eval_rho(mol, ao_value, dm, xctype=xctype)
+    s = utils.get_s(rho[0], rho[1:4])
     rho[0] = (gam**3) * rho[0]
     rho[1:4] = (gam**4) * rho[1:4]
     if rho.shape[0] > 4:
@@ -73,12 +80,12 @@ if __name__ == '__main__':
     e_c_gam = e_c_check(mol, base_mf, mf, gams, xc=xc, xctype=xctype)
     plt.plot(gams, e_c_gam, label=xc)
 
-  plt.plot(gams, e_c * gams, color='black', label='$\gamma E^*_c $')
+  plt.plot(gams, e_c * gams, color='black', label=r'$gamma E^*_c$')
   plt.axvline(x=1, alpha=0.4, color='k', linestyle='--')
 
   plt.legend()
   plt.title(title)
-  plt.xlabel('$\gamma$')
+  plt.xlabel(r'$\gamma$')
   plt.xlim(left=0)
   plt.ylim(top=0)
   plt.grid(alpha=0.2)
