@@ -204,8 +204,42 @@ def deriv_check(input, eps_c, tol=1e-5):
   return cond_satisfied, ranges
 
 
+def deriv_upper_bd_check(input, eps_c, tol=1e-5):
+
+  r_s_mesh = input[0]
+  n = get_density(r_s_mesh)
+  eps_x_unif = get_eps_x_unif(n)
+
+  r_s_dx = r_s_mesh[1][0][0] - r_s_mesh[0][0][0]
+
+  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
+  regions = np.diff(f_c, axis=0) / r_s_dx
+
+  low_bd_regions = np.where(regions < -tol, True, False)
+
+  input = [feature[1:] for feature in input]
+  r_s_mesh = input[0]
+  f_c = f_c[1:]
+  up_bd_regions = np.where(regions - f_c / r_s_mesh > 100 * tol, True, False)
+
+  # TODO up and low bd regions..
+  regions = regions.flatten()
+
+  cond_satisfied = not np.any(regions)
+
+  if not cond_satisfied:
+    # remove first entry
+    input = (feature.flatten() for feature in input)
+    ranges = ([np.amin(feature[regions]),
+               np.amax(feature[regions])] for feature in input)
+  else:
+    ranges = None
+
+  return cond_satisfied, ranges
+
+
 if __name__ == '__main__':
-  example = 'mgga_c_lapl'
+  example = 'gga'
 
   if example == "mgga_c_lapl":
 
@@ -258,7 +292,7 @@ if __name__ == '__main__':
 
     eps_c = gga_c("gga_c_pbe", *input)
 
-    cond_satisfied, ranges = deriv_check(input, eps_c)
+    cond_satisfied, ranges = deriv_upper_bd_check(input, eps_c)
 
     print(cond_satisfied)
     if ranges is not None:

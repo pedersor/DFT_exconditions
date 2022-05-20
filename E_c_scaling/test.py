@@ -9,9 +9,9 @@ from pyscf.dft import numint
 import utils
 
 
-def e_c_check(mol, base_mf, ccsd_mf, gams, xc='pbe', xctype='GGA'):
+def e_c_check(mol, base_mf, mf, gams, xc='pbe', xctype='GGA'):
 
-  dm = ccsd_mf.make_rdm1()
+  dm = mf.make_rdm1()
 
   coords = base_mf.grids.coords
   weights = base_mf.grids.weights
@@ -43,9 +43,7 @@ def e_c_check(mol, base_mf, ccsd_mf, gams, xc='pbe', xctype='GGA'):
   return e_c_gam
 
 
-if __name__ == '__main__':
-  import matplotlib.pyplot as plt
-
+def plot_E_c_gamma():
   title = 'h2'
   gams = np.linspace(0.2, 2, num=20)
 
@@ -91,3 +89,64 @@ if __name__ == '__main__':
   plt.grid(alpha=0.2)
   title = title.replace(' ', '_')
   plt.savefig(f'{title}.pdf', bbox_inches='tight')
+
+
+def plot_E_c_deriv_gamma():
+  title = 'h2'
+  gams = np.linspace(0.2, 2, num=20)
+  gam_dx = gams[1] - gams[0]
+
+  # CCSD(T) calculation
+  mol = gto.M(
+      atom='H 0 0 0;H 0 0 0.74',  # in Angstrom
+      basis='ccpv5z',
+      symmetry=True)
+  mf = scf.HF(mol).run()
+
+  # dummy calculation to get larger range of grids and weights
+  tmp_mol = gto.M(atom='Be 0 0 0;Be 0 0 0.74', basis='ccpv5z')
+  base_mf = dft.RKS(tmp_mol)
+  base_mf.xc = 'lda,vwn'
+  base_mf.max_cycle = 1
+  base_mf.kernel()
+
+  xcs = [
+      ('pbe', 'GGA'),
+      ('P86', 'GGA'),
+      ('lyp', 'GGA'),
+      ('scan', 'MGGA'),
+      ('m05', 'MGGA'),
+      ('m11', 'MGGA'),
+      ('mn15', 'MGGA'),
+  ]
+  for xc, xctype in xcs:
+    e_c_gam = e_c_check(mol, base_mf, mf, gams, xc=xc, xctype=xctype)
+    p, = plt.plot(
+        gams,
+        e_c_gam / gams,
+        '--',
+        alpha=0.4,
+    )
+    plt.plot(
+        gams,
+        np.gradient(e_c_gam, gams),
+        label=f'{xc} dEc/dgam',
+        color=p.get_color(),
+    )
+
+  plt.axvline(x=1, alpha=0.4, color='k', linestyle='--')
+
+  plt.legend()
+  plt.title(title)
+  plt.xlabel(r'$\gamma$')
+  plt.xlim(left=0)
+  plt.ylim(top=0)
+  plt.grid(alpha=0.2)
+  title = title.replace(' ', '_')
+  plt.savefig(f'{title}.pdf', bbox_inches='tight')
+
+
+if __name__ == '__main__':
+  import matplotlib.pyplot as plt
+
+  plot_E_c_deriv_gamma()
