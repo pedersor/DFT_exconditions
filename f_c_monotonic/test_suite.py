@@ -234,7 +234,7 @@ def deriv_upper_bd_check(input, eps_c, r_s_dx, tol=1e-3):
 
 
 if __name__ == '__main__':
-  example = 'gga'
+  example = 'mgga'
 
   if example == "mgga_c_lapl":
 
