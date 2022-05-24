@@ -204,35 +204,28 @@ def deriv_check(input, eps_c, tol=1e-5):
   return cond_satisfied, ranges
 
 
-def deriv_upper_bd_check(input, eps_c, tol=1e-5):
+def deriv_upper_bd_check(input, eps_c, r_s_dx, tol=1e-5):
 
   r_s_mesh = input[0]
   n = get_density(r_s_mesh)
   eps_x_unif = get_eps_x_unif(n)
 
-  r_s_dx = r_s_mesh[1][0][0] - r_s_mesh[0][0][0]
-
   f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
-  # TODO more accurate derivs from np.gradient?
-  regions = np.diff(f_c, axis=0) / r_s_dx
 
-  low_bd_regions = np.where(regions < -tol, True, False)
+  regions_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
+  up_bd_regions = np.where(
+      regions_grad - (f_c / r_s_mesh) > 100 * tol,
+      True,
+      False,
+  )
 
-  input = [feature[1:] for feature in input]
-  r_s_mesh = input[0]
-  f_c = f_c[1:]
-  up_bd_regions = np.where(regions - f_c / r_s_mesh > 100 * tol, True, False)
-
-  # TODO up and low bd regions..
-  regions = regions.flatten()
-
-  cond_satisfied = not np.any(regions)
+  cond_satisfied = not np.any(up_bd_regions)
 
   if not cond_satisfied:
-    # remove first entry
-    input = (feature.flatten() for feature in input)
-    ranges = ([np.amin(feature[regions]),
-               np.amax(feature[regions])] for feature in input)
+    ranges = ([
+        np.amin(feature[up_bd_regions]),
+        np.amax(feature[up_bd_regions])
+    ] for feature in input)
   else:
     ranges = None
 
@@ -240,7 +233,7 @@ def deriv_upper_bd_check(input, eps_c, tol=1e-5):
 
 
 if __name__ == '__main__':
-  example = 'gga'
+  example = 'mgga'
 
   if example == "mgga_c_lapl":
 
@@ -282,18 +275,15 @@ if __name__ == '__main__':
         print(r)
 
   if example == 'gga':
-    r_s = np.linspace(0.001, 2, 500)
-
-    r_s = np.linspace(0.001, 2, 50)
-
+    r_s = np.linspace(0.001, 2, 1000)
     s = np.linspace(0, 5, 50)
     zeta = np.linspace(0, 1, 50)
-
     input = np.meshgrid(r_s, s, zeta, indexing='ij')
 
     eps_c = gga_c("gga_c_pbe", *input)
 
-    cond_satisfied, ranges = deriv_upper_bd_check(input, eps_c)
+    r_s_dx = r_s[1] - r_s[0]
+    cond_satisfied, ranges = deriv_upper_bd_check(input, eps_c, r_s_dx)
 
     print(cond_satisfied)
     if ranges is not None:
@@ -304,17 +294,17 @@ if __name__ == '__main__':
 
     r_s = np.linspace(0.0001, 2, 500)
 
-    r_s = np.linspace(0.0001, 0.1, 50)
-
     s = np.linspace(0, 5, 50)
     alpha = np.linspace(0, 5, 50)
     zeta = np.linspace(0, 1.0, 50)
 
     input = np.meshgrid(r_s, s, zeta, alpha, indexing='ij')
 
-    eps_c = mgga_c("MGGA_C_R2SCAN", *input)
+    eps_c = mgga_c("MGGA_C_SCAN", *input)
 
-    cond_satisfied, ranges = deriv_check(input, eps_c)
+    r_s_dx = r_s[1] - r_s[0]
+    cond_satisfied, ranges = deriv_upper_bd_check(input, eps_c, r_s_dx)
+    #cond_satisfied, ranges = deriv_check(input, eps_c)
 
     print(cond_satisfied)
     if ranges is not None:
