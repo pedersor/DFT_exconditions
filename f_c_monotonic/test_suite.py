@@ -213,6 +213,7 @@ def deriv_upper_bd_check(input, eps_c, tol=1e-5):
   r_s_dx = r_s_mesh[1][0][0] - r_s_mesh[0][0][0]
 
   f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
+  # TODO more accurate derivs from np.gradient?
   regions = np.diff(f_c, axis=0) / r_s_dx
 
   low_bd_regions = np.where(regions < -tol, True, False)
