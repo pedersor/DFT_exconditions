@@ -98,14 +98,15 @@ if 'mgga_c_' in xc:
 
 elif 'gga_c_' in xc:
 
-  r_s = np.linspace(0.0001, 5, 2000)
+  r_s = np.linspace(0.0001, 5, 5000)
   s = np.linspace(0, 5, 500)
   zeta = np.linspace(0, 1, 100)
   input = np.meshgrid(r_s, s, zeta, indexing='ij')
 
   eps_c = test_suite.gga_c(xc, *input)
 
-  cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
+  r_s_dx = r_s[1] - r_s[0]
+  cond_satisfied, ranges = test_suite.deriv_upper_bd_check(input, eps_c, r_s_dx)
 
   if ranges is not None:
     for i, r in enumerate(ranges):
