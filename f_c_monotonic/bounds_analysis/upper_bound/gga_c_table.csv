@@ -1,0 +1,63 @@
+GGA corr.,satisfied condition?,$r_s$ range,$s$ range,$\zeta$ range ,Refs.
+acgga,True,---,---,---,"\cite{Cancio2018_084116,Burke2014_4834}"
+acggap,False,[1.0000e-04 3.2287e+00],[1.002  2.4349],[0.     0.9899],"\cite{Cancio2018_084116,Burke2014_4834}"
+am05,True,---,---,---,"\cite{Armiento2005_085108,Mattsson2008_084714}"
+apbe,False,[1.000e-04 3.982e-01],[0.0301 1.3126],[0.     0.9899],\cite{Constantin2011_186406}
+bmk,False,[1.e-04 5.e+00],[0. 5.],[0. 1.],\cite{Boese2004_3405}
+ccdf,True,---,---,---,\cite{Margraf2019_244116}
+chachiyo,False,[1.0000e-04 2.9626e+00],[0.01   1.3226],[0. 1.],\cite{Chachiyo2020_112669}
+cs1,False,[0.0081 5.    ],[1.5932 5.    ],[0. 1.],"\cite{Handy2002_5411,Proynov2006_436}"
+ft97,False,[1.000e-04 1.231e-01],[0.0301 5.    ],[1. 1.],"\cite{Filatov1997_603,Filatov1997_847}"
+gam,False,[1.e-04 5.e+00],[0.2505 5.    ],[0. 1.],\cite{Yu2015_12146}
+gapc,False,[1.000e-04 6.562e-01],[0.01 5.  ],[0. 1.],\cite{Fabiano2014_2016}
+gaploc,False,[1.0000e-04 2.1055e+00],[0.1002 5.    ],[0. 1.],\cite{Fabiano2014_2016}
+hcth\_a,False,[1.e-04 5.e+00],[2.1343 5.    ],[0.     0.9495],\cite{Hamprecht1998_6264}
+hyb\_tau\_hcth,False,[1.e-04 5.e+00],[1.5331 5.    ],[0.     0.9596],\cite{Boese2002_9559}
+lm,True,---,---,---,"\cite{Langreth1981_446,Hu1985_391}"
+lyp,False,[0.6392 5.    ],[1.4329 5.    ],[0.     0.9899],"\cite{Lee1988_785,Miehlich1989_200}"
+lypr,False,[0.4492 4.4909],[1.3226 5.    ],[0.     0.9899],\cite{Ai2021_1207}
+mggac,False,[1.000e-04 3.982e-01],[0.0501 2.1443],[0.     0.9899],\cite{Patra2019_155140}
+n12,True,---,---,---,\cite{Peverati2012_2310}
+n12\_sx,False,[1.e-04 5.e+00],[0.9319 5.    ],[0. 1.],\cite{Peverati2012_16187}
+op\_b88,False,[0.4942 5.    ],[0. 5.],[1. 1.],\cite{Tsuneda1999_10664}
+op\_g96,False,[0.4942 5.    ],[0. 5.],[1. 1.],"\cite{Tsuneda1999_10664,Tsuneda1999_5656}"
+op\_pbe,False,[0.4942 5.    ],[0. 5.],[1. 1.],"\cite{Tsuneda1999_10664,Tsuneda1999_5656}"
+op\_pw91,False,[0.0251 4.997 ],[0. 5.],[1. 1.],"\cite{Tsuneda1999_10664,Tsuneda1999_5656}"
+optc,False,[0.0001 0.0151],[0.01   0.3307],[0.     0.9899],\cite{Cohen2001_607}
+op\_xalpha,False,[0.5392 5.    ],[0. 5.],[1. 1.],"\cite{Tsuneda1999_10664,Tsuneda1999_5656}"
+p86,False,[2.1e-03 5.0e+00],[0.0501 5.    ],[0. 1.],\cite{Perdew1986_8822}
+p86\_ft,False,[2.1e-03 5.0e+00],[0.0501 5.    ],[0. 1.],\cite{Perdew1986_8822}
+p86vwn,False,[2.1e-03 5.0e+00],[0.0501 5.    ],[0. 1.],\cite{Perdew1986_8822}
+p86vwn\_ft,False,[2.1e-03 5.0e+00],[0.0501 5.    ],[0. 1.],\cite{Perdew1986_8822}
+pbe,False,[1.000e-04 3.982e-01],[0.0401 1.4329],[0.     0.9899],"\cite{Perdew1996_3865,Perdew1996_3865_err}"
+pbefe,False,[1.000e-04 3.982e-01],[0.0401 1.7836],[0.     0.9899],\cite{Perez2015_3844}
+pbeint,False,[1.000e-04 3.982e-01],[0.0401 1.6232],[0.     0.9899],\cite{Fabiano2010_113104}
+pbe\_jrgx,False,[1.000e-04 3.982e-01],[0.0501 1.9138],[0.     0.9899],\cite{Pedroza2009_201106}
+pbeloc,False,[1.e-04 5.e+00],[0.0501 2.4248],[0. 1.],\cite{Constantin2012_035130}
+pbe\_mol,False,[1.000e-04 3.982e-01],[0.0301 1.2826],[0.     0.9899],\cite{delCampo2012_104108}
+pbe\_sol,False,[1.000e-04 3.982e-01],[0.0401 1.7335],[0.     0.9899],\cite{Perdew2008_136406}
+pbe\_vwn,False,[1.000e-04 3.612e-01],[0.0401 1.4228],[0.     0.9899],"\cite{Kraisler2010_042516,Perdew1996_3865,Perdew1996_3865_err}"
+pw91,False,[0.0001 0.0151],[0.01   0.3507],[0. 1.],"\cite{Perdew1991,Perdew1992_6671,Perdew1992_6671_err}"
+q2d,False,[0.0001 0.0041],[0.0301 0.491 ],[0. 1.],\cite{Chiodo2012_126402}
+regtpss,False,[1.0000e-04 2.9226e+00],[0.0401 2.3747],[0. 1.],\cite{Perdew2009_026403}
+revtca,False,[0.0061 5.    ],[0.01   2.1242],[0.4242 1.    ],\cite{Tognetti2008_536}
+rge2,False,[1.000e-04 3.982e-01],[0.0401 1.6132],[0.     0.9899],\cite{Ruzsinszky2009_763}
+scan\_e0,True,---,---,---,\cite{Sun2015_036402}
+sg4,False,[1.6454 5.    ],[0.8717 1.8537],[0.     0.4343],\cite{Constantin2016_045126}
+sogga11,False,[0.0011 0.7712],[0.0301 0.511 ],[0. 1.],\cite{Peverati2011_1991}
+sogga11\_x,True,---,---,---,\cite{Peverati2011_191102}
+spbe,False,[0.0001 0.0121],[0.0401 0.992 ],[0.9091 0.9899],\cite{Swart2009_094103}
+tau\_hcth,False,[1.e-04 5.e+00],[1.6032 5.    ],[0.     0.9596],\cite{Boese2002_9559}
+tca,True,---,---,---,\cite{Tognetti2008_034101}
+tm\_lyp,False,[0.6792 5.    ],[1.1423 5.    ],[0.     0.9899],\cite{Thakkar2009_134109}
+tm\_pbe,False,[1.e-04 5.e+00],[0.01   2.7455],[0. 1.],\cite{Thakkar2009_134109}
+w94,True,---,---,---,\cite{Wilson1994_337}
+wi0,False,[1.0000e-04 3.7528e+00],[1.9639 5.    ],[0. 1.],\cite{Wilson1998_523}
+wi,False,[1.e-04 5.e+00],[0.511 5.   ],[0. 1.],\cite{Wilson1998_523}
+wl,False,[2.3735 5.    ],[2.485 5.   ],[0.     0.7172],\cite{Wilson1990_12930}
+xpbe,True,---,---,---,\cite{Xu2004_4068}
+zpbeint,False,[0.1731 0.3982],[1.3126 1.6232],[0. 0.],\cite{Constantin2011_233103}
+zpbesol,False,[0.1731 0.3982],[1.3928 1.7335],[0. 0.],\cite{Constantin2011_233103}
+zvpbeint,False,[1.000e-04 3.982e-01],[1.002 1.994],[0.     0.0505],\cite{Constantin2012_194105}
+zvpbeloc,False,[1.e-04 5.e+00],[0.501  2.4248],[0.     0.9899],\cite{Fabiano2015_122}
+zvpbesol,False,[1.000e-04 3.982e-01],[1.002  1.8537],[0.     0.0404],\cite{Constantin2012_194105}

@@ -15,7 +15,8 @@ func_types = ['gga_c_']
 for func_type in func_types:
   for xc_func in xc_funcs:
     # filter out 1d and 2d functionals
-    if func_type in xc_func and '_1d_' not in xc_func and '_2d_' not in xc_func:
+    if func_type in xc_func and func_type[0] == xc_func[
+        0] and '_1d_' not in xc_func and '_2d_' not in xc_func:
 
       run_file = '../run_test.py'
       job_file = f'{xc_func}.job'
