@@ -7,7 +7,7 @@ import pylibxc
 
 import test_suite
 
-xc = 'gga_c_pbe'  #sys.argv[1]
+xc = sys.argv[1]
 func_c = pylibxc.LibXCFunctional(xc, "polarized")
 
 df = {
@@ -27,8 +27,7 @@ if 'mgga_c_' in xc:
 
   if func_c._needs_laplacian:
 
-    # reduce for memory
-    r_s = np.linspace(0.0001, 5, 1000)
+    r_s = np.linspace(0.0001, 5, 3000)
     s = np.linspace(0, 5, 100)
     zeta = np.linspace(0, 1, 20)
     alpha = np.linspace(0, 5, 10)
@@ -37,11 +36,11 @@ if 'mgga_c_' in xc:
     r_s_dx = r_s[1] - r_s[0]
 
     # split up to reduce memory
-    r_s_splits = np.split(r_s, 100)
+    s_splits = np.split(s, 10)
     cond_satisfied = True
-    for r_s_split in r_s_splits:
+    for s_split in s_splits:
 
-      input = np.meshgrid(r_s_split, s, zeta, alpha, q, indexing='ij')
+      input = np.meshgrid(r_s, s_split, zeta, alpha, q, indexing='ij')
       eps_c = test_suite.mgga_c_lapl(func_c, *input)
       split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
           input, eps_c, r_s_dx)
@@ -66,7 +65,7 @@ if 'mgga_c_' in xc:
 
   else:
 
-    r_s = np.linspace(0.0001, 5, 1000)
+    r_s = np.linspace(0.0001, 5, 3000)
     s = np.linspace(0, 5, 100)
     zeta = np.linspace(0, 1, 20)
     alpha = np.linspace(0, 5, 100)
@@ -74,11 +73,11 @@ if 'mgga_c_' in xc:
     r_s_dx = r_s[1] - r_s[0]
 
     # split up to reduce memory
-    r_s_splits = np.split(r_s, 100)
+    s_splits = np.split(s, 10)
     cond_satisfied = True
-    for r_s_split in r_s_splits:
+    for s_split in s_splits:
 
-      input = np.meshgrid(r_s_split, s, zeta, alpha, indexing='ij')
+      input = np.meshgrid(r_s, s_split, zeta, alpha, indexing='ij')
       eps_c = test_suite.mgga_c(xc, *input)
       split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
           input, eps_c, r_s_dx)
