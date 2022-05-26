@@ -180,7 +180,7 @@ def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
   return eps_c
 
 
-def deriv_check(input, eps_c, tol=1e-5):
+def deriv_lower_bd_check(input, eps_c, tol=1e-5):
 
   n = get_density(input[0])
   eps_x_unif = get_eps_x_unif(n)
@@ -233,8 +233,30 @@ def deriv_upper_bd_check(input, eps_c, r_s_dx, tol=1e-3):
   return cond_satisfied, ranges
 
 
+def negativity_check(input, eps_c):
+
+  r_s_mesh = input[0]
+  eps_c = eps_c.reshape(r_s_mesh.shape)
+
+  regions = np.where(
+      eps_c > 0,
+      True,
+      False,
+  )
+
+  cond_satisfied = not np.any(regions)
+
+  if not cond_satisfied:
+    ranges = ([np.amin(feature[regions]),
+               np.amax(feature[regions])] for feature in input)
+  else:
+    ranges = None
+
+  return cond_satisfied, ranges
+
+
 if __name__ == '__main__':
-  example = 'mgga'
+  example = 'gga'
 
   if example == "mgga_c_lapl":
 
@@ -253,7 +275,7 @@ if __name__ == '__main__':
     func_c = pylibxc.LibXCFunctional(func_id, "polarized")
     eps_c = mgga_c_lapl(func_c, *input)
 
-    cond_satisfied, ranges = deriv_check(input, eps_c)
+    cond_satisfied, ranges = deriv_lower_bd_check(input, eps_c)
 
     print(cond_satisfied)
     if ranges is not None:
@@ -268,7 +290,7 @@ if __name__ == '__main__':
 
     eps_c = lda_c("lda_c_pw", *input)
 
-    cond_satisfied, ranges = deriv_check(input, eps_c)
+    cond_satisfied, ranges = deriv_lower_bd_check(input, eps_c)
 
     print(cond_satisfied)
     if ranges is not None:

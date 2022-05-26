@@ -42,9 +42,10 @@ if 'mgga_c_' in xc:
 
       input = np.meshgrid(r_s, s_split, zeta, alpha, q, indexing='ij')
       eps_c = test_suite.mgga_c_lapl(func_c, *input)
-      split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
-          input, eps_c, r_s_dx)
+      #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
+      #    input, eps_c, r_s_dx)
       #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
+      split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
 
       del input
       del eps_c
@@ -79,9 +80,10 @@ if 'mgga_c_' in xc:
 
       input = np.meshgrid(r_s, s_split, zeta, alpha, indexing='ij')
       eps_c = test_suite.mgga_c(xc, *input)
-      split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
-          input, eps_c, r_s_dx)
+      #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
+      #    input, eps_c, r_s_dx)
       #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
+      split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
 
       del input
       del eps_c
@@ -119,9 +121,10 @@ elif 'gga_c_' in xc:
     input = np.meshgrid(r_s, s_split, zeta, indexing='ij')
 
     eps_c = test_suite.gga_c(xc, *input)
-    split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
-        input, eps_c, r_s_dx)
+    #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
+    #    input, eps_c, r_s_dx)
     #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
+    split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
 
     del input
     del eps_c
