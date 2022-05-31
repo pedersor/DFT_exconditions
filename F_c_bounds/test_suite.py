@@ -233,13 +233,13 @@ def deriv_upper_bd_check(input, eps_c, r_s_dx, tol=1e-3):
   return cond_satisfied, ranges
 
 
-def negativity_check(input, eps_c):
+def negativity_check(input, eps_c, tol=1e-5):
 
   r_s_mesh = input[0]
   eps_c = eps_c.reshape(r_s_mesh.shape)
 
   regions = np.where(
-      eps_c > 0,
+      eps_c > tol,
       True,
       False,
   )
@@ -256,7 +256,7 @@ def negativity_check(input, eps_c):
 
 
 if __name__ == '__main__':
-  example = 'gga'
+  example = 'mgga'
 
   if example == "mgga_c_lapl":
 
@@ -298,15 +298,15 @@ if __name__ == '__main__':
         print(r)
 
   if example == 'gga':
-    r_s = np.linspace(0.001, 2, 1000)
+    r_s = np.linspace(0.0001, 2, 1000)
     s = np.linspace(0, 5, 50)
     zeta = np.linspace(0, 1, 50)
     input = np.meshgrid(r_s, s, zeta, indexing='ij')
 
-    eps_c = gga_c("gga_c_pbe", *input)
+    eps_c = gga_c("gga_c_pw91", *input)
 
     r_s_dx = r_s[1] - r_s[0]
-    cond_satisfied, ranges = deriv_upper_bd_check(input, eps_c, r_s_dx)
+    cond_satisfied, ranges = negativity_check(input, eps_c)
 
     print(cond_satisfied)
     if ranges is not None:
@@ -315,7 +315,7 @@ if __name__ == '__main__':
 
   if example == "mgga":
 
-    r_s = np.linspace(0.001, 2, 200)
+    r_s = np.linspace(0.001, 2, 50)
 
     s = np.linspace(0, 5, 50)
     alpha = np.linspace(0, 5, 50)
@@ -326,7 +326,7 @@ if __name__ == '__main__':
     eps_c = mgga_c("MGGA_C_SCAN", *input)
 
     r_s_dx = r_s[1] - r_s[0]
-    cond_satisfied, ranges = deriv_upper_bd_check(input, eps_c, r_s_dx)
+    cond_satisfied, ranges = negativity_check(input, eps_c)
     #cond_satisfied, ranges = deriv_check(input, eps_c)
 
     print(cond_satisfied)
