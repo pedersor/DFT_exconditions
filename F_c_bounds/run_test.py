@@ -36,7 +36,7 @@ if 'mgga_c_' in xc:
     r_s_dx = r_s[1] - r_s[0]
 
     # split up to reduce memory
-    s_splits = np.split(s, 10)
+    s_splits = np.split(s, 20)
     cond_satisfied = True
     for s_split in s_splits:
 
@@ -74,7 +74,7 @@ if 'mgga_c_' in xc:
     r_s_dx = r_s[1] - r_s[0]
 
     # split up to reduce memory
-    s_splits = np.split(s, 10)
+    s_splits = np.split(s, 20)
     cond_satisfied = True
     for s_split in s_splits:
 
@@ -114,7 +114,7 @@ elif 'gga_c_' in xc:
   zeta = np.linspace(0, 1, 100)
 
   r_s_dx = r_s[1] - r_s[0]
-  s_splits = np.split(s, 10)
+  s_splits = np.split(s, 20)
 
   cond_satisfied = True
   for s_split in s_splits:

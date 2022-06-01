@@ -26,7 +26,7 @@ for func_type in func_types:
             #!/bin/bash
             #SBATCH --job-name="{xc_func}"
             #SBATCH --account=burke
-            #SBATCH --partition=sib2.9
+            #SBATCH --partition=sib2.9,nes2.8
             #SBATCH --ntasks=1
             #SBATCH --nodes=1
             #SBATCH --cpus-per-task=8
