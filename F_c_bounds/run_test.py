@@ -36,15 +36,16 @@ if 'mgga_c_' in xc:
     r_s_dx = r_s[1] - r_s[0]
 
     # split up to reduce memory
-    s_splits = np.split(s, 10)
+    s_splits = np.split(s, 20)
     cond_satisfied = True
     for s_split in s_splits:
 
       input = np.meshgrid(r_s, s_split, zeta, alpha, q, indexing='ij')
       eps_c = test_suite.mgga_c_lapl(func_c, *input)
-      split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
-          input, eps_c, r_s_dx)
+      #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
+      #    input, eps_c, r_s_dx)
       #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
+      split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
 
       del input
       del eps_c
@@ -73,15 +74,16 @@ if 'mgga_c_' in xc:
     r_s_dx = r_s[1] - r_s[0]
 
     # split up to reduce memory
-    s_splits = np.split(s, 10)
+    s_splits = np.split(s, 20)
     cond_satisfied = True
     for s_split in s_splits:
 
       input = np.meshgrid(r_s, s_split, zeta, alpha, indexing='ij')
       eps_c = test_suite.mgga_c(xc, *input)
-      split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
-          input, eps_c, r_s_dx)
+      #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
+      #    input, eps_c, r_s_dx)
       #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
+      split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
 
       del input
       del eps_c
@@ -112,16 +114,17 @@ elif 'gga_c_' in xc:
   zeta = np.linspace(0, 1, 100)
 
   r_s_dx = r_s[1] - r_s[0]
-  s_splits = np.split(s, 10)
+  s_splits = np.split(s, 20)
 
   cond_satisfied = True
   for s_split in s_splits:
     input = np.meshgrid(r_s, s_split, zeta, indexing='ij')
 
     eps_c = test_suite.gga_c(xc, *input)
-    split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
-        input, eps_c, r_s_dx)
+    #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
+    #    input, eps_c, r_s_dx)
     #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
+    split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
 
     del input
     del eps_c

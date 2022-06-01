@@ -180,7 +180,7 @@ def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
   return eps_c
 
 
-def deriv_check(input, eps_c, tol=1e-5):
+def deriv_lower_bd_check(input, eps_c, tol=1e-5):
 
   n = get_density(input[0])
   eps_x_unif = get_eps_x_unif(n)
@@ -233,6 +233,28 @@ def deriv_upper_bd_check(input, eps_c, r_s_dx, tol=1e-3):
   return cond_satisfied, ranges
 
 
+def negativity_check(input, eps_c, tol=1e-5):
+
+  r_s_mesh = input[0]
+  eps_c = eps_c.reshape(r_s_mesh.shape)
+
+  regions = np.where(
+      eps_c > tol,
+      True,
+      False,
+  )
+
+  cond_satisfied = not np.any(regions)
+
+  if not cond_satisfied:
+    ranges = ([np.amin(feature[regions]),
+               np.amax(feature[regions])] for feature in input)
+  else:
+    ranges = None
+
+  return cond_satisfied, ranges
+
+
 if __name__ == '__main__':
   example = 'mgga'
 
@@ -253,7 +275,7 @@ if __name__ == '__main__':
     func_c = pylibxc.LibXCFunctional(func_id, "polarized")
     eps_c = mgga_c_lapl(func_c, *input)
 
-    cond_satisfied, ranges = deriv_check(input, eps_c)
+    cond_satisfied, ranges = deriv_lower_bd_check(input, eps_c)
 
     print(cond_satisfied)
     if ranges is not None:
@@ -268,7 +290,7 @@ if __name__ == '__main__':
 
     eps_c = lda_c("lda_c_pw", *input)
 
-    cond_satisfied, ranges = deriv_check(input, eps_c)
+    cond_satisfied, ranges = deriv_lower_bd_check(input, eps_c)
 
     print(cond_satisfied)
     if ranges is not None:
@@ -276,15 +298,15 @@ if __name__ == '__main__':
         print(r)
 
   if example == 'gga':
-    r_s = np.linspace(0.001, 2, 1000)
+    r_s = np.linspace(0.0001, 2, 1000)
     s = np.linspace(0, 5, 50)
     zeta = np.linspace(0, 1, 50)
     input = np.meshgrid(r_s, s, zeta, indexing='ij')
 
-    eps_c = gga_c("gga_c_pbe", *input)
+    eps_c = gga_c("gga_c_pw91", *input)
 
     r_s_dx = r_s[1] - r_s[0]
-    cond_satisfied, ranges = deriv_upper_bd_check(input, eps_c, r_s_dx)
+    cond_satisfied, ranges = negativity_check(input, eps_c)
 
     print(cond_satisfied)
     if ranges is not None:
@@ -293,7 +315,7 @@ if __name__ == '__main__':
 
   if example == "mgga":
 
-    r_s = np.linspace(0.001, 2, 200)
+    r_s = np.linspace(0.001, 2, 50)
 
     s = np.linspace(0, 5, 50)
     alpha = np.linspace(0, 5, 50)
@@ -304,7 +326,7 @@ if __name__ == '__main__':
     eps_c = mgga_c("MGGA_C_SCAN", *input)
 
     r_s_dx = r_s[1] - r_s[0]
-    cond_satisfied, ranges = deriv_upper_bd_check(input, eps_c, r_s_dx)
+    cond_satisfied, ranges = negativity_check(input, eps_c)
     #cond_satisfied, ranges = deriv_check(input, eps_c)
 
     print(cond_satisfied)
