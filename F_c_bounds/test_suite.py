@@ -97,14 +97,12 @@ def get_lapl(q, n, zeta):
 # end defintions ====
 
 
-def lda_c(func_id, r_s, zeta):
+def lda_c(func_c, r_s, zeta):
   """ Obtains correlation energy per particle for LDA-type functionals: 
 
   \epsilon_c^{LDA}(r_s, \zeta) .
 
   """
-
-  func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
   input = (r_s, zeta)
   input = (feature.flatten() for feature in input)
@@ -123,14 +121,12 @@ def lda_c(func_id, r_s, zeta):
   return eps_c
 
 
-def gga_c(func_id, r_s, s, zeta):
+def gga_c(func_c, r_s, s, zeta):
   """ Obtains correlation energy per particle for GGA-type functionals:
 
   \epsilon_c^{GGA}(r_s, s, \zeta, \alpha) .
 
   """
-
-  func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
   input = (r_s, s, zeta)
   input = (feature.flatten() for feature in input)
@@ -152,15 +148,13 @@ def gga_c(func_id, r_s, s, zeta):
   return eps_c
 
 
-def mgga_c(func_id, r_s, s, zeta, alpha, q=None):
+def mgga_c(func_c, r_s, s, zeta, alpha, q=None):
   """ Obtains correlation energy per particle for MGGA-type functionals 
   (without laplacian):
   
   \epsilon_c^{MGGA}(r_s, s, \zeta, \alpha) .
   
   """
-
-  func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
   input = (r_s, s, zeta, alpha)
   input = (feature.flatten() for feature in input)
@@ -214,6 +208,43 @@ def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
   eps_c = np.squeeze(func_c_res['zk'])
 
   return eps_c
+
+
+def get_epc_c(func_id, input):
+
+  func_c = pylibxc.LibXCFunctional(func_id, "polarized")
+
+  if 'mgga_c_' in func_id:
+    if func_c._needs_laplacian:
+      return mgga_c_lapl(func_c, *input)
+    else:
+      return mgga_c(func_c, *input)
+  elif 'gga_c_' in func_id:
+    return gga_c(func_c, *input)
+  elif 'lda_c_' in func_id:
+    return lda_c(func_c, *input)
+
+  return NotImplementedError(f"functional {func_id} not supported.")
+
+
+def check_condition(func_id, condition, input, tol=None):
+
+  r_s = input[0]
+  if condition.__name__ == 'deriv_upper_bd_check_1':
+    # add r_s = 100 (to approximate r_s -> \infty)
+    input[0] = np.append(r_s, 100)
+
+  r_s_dx = r_s[1] - r_s[0]
+  input = np.meshgrid(*input, indexing='ij')
+  eps_c = get_epc_c(func_id, input)
+
+  if tol:
+    result = condition(input, eps_c, r_s_dx, tol)
+  else:
+    # use default tol for condition
+    result = condition(input, eps_c, r_s_dx)
+
+  return result
 
 
 def deriv_lower_bd_check(input, eps_c, r_s_dx, tol=1e-5):
@@ -370,78 +401,20 @@ def negativity_check(input, eps_c, r_s_dx, tol=1e-5):
 
 
 if __name__ == '__main__':
-  example = 'mgga'
 
-  if example == "mgga_c_lapl":
+  r_s = np.linspace(0.0001, 2, 1000)
+  s = np.linspace(0, 5, 50)
+  zeta = np.linspace(0, 1, 50)
 
-    r_s = np.linspace(0.0001, 0.1, 50)
-    r_s_dx = r_s[1] - r_s[0]
-    s = np.linspace(0, 5, 10)
-    alpha = np.linspace(0, 5, 10)
-    zeta = np.linspace(0, 1.0, 10)
-    q = np.linspace(0, 5.0, 50)
+  # note that order must be in the form
+  input = [r_s, s, zeta]
+  cond_satisfied, ranges = check_condition(
+      "gga_c_pbe",
+      deriv_upper_bd_check_1,
+      input,
+  )
 
-    input = np.meshgrid(r_s, s, zeta, alpha, q, indexing='ij')
-    func_id = "MGGA_C_SCANL"
-    func_c = pylibxc.LibXCFunctional(func_id, "polarized")
-    eps_c = mgga_c_lapl(func_c, *input)
-
-    cond_satisfied, ranges = deriv_lower_bd_check(input, eps_c)
-
-    print(cond_satisfied)
-    if ranges is not None:
-      for r in ranges:
-        print(r)
-
-  if example == 'lda':
-    r_s = np.linspace(0.0001, 2, 5000)
-    r_s_dx = r_s[1] - r_s[0]
-    zeta = np.linspace(0, 1.0, 50)
-
-    input = np.meshgrid(r_s, zeta, indexing='ij')
-    eps_c = lda_c("lda_c_pw", *input)
-
-    cond_satisfied, ranges = deriv_lower_bd_check(input, eps_c, r_s_dx)
-
-    print(cond_satisfied)
-    if ranges is not None:
-      for r in ranges:
-        print(r)
-
-  if example == 'gga':
-    r_s = np.linspace(0.0001, 2, 1000)
-    r_s_dx = r_s[1] - r_s[0]
-    # add r_s = 100 (r_s -> \infty)
-    r_s = np.append(r_s, 100)
-    s = np.linspace(0, 5, 50)
-    zeta = np.linspace(0, 1, 50)
-    input = np.meshgrid(r_s, s, zeta, indexing='ij')
-
-    eps_c = gga_c("gga_c_pbe", *input)
-
-    cond_satisfied, ranges = deriv_upper_bd_check_1(input, eps_c, r_s_dx)
-
-    print(cond_satisfied)
-    if ranges is not None:
-      for r in ranges:
-        print(r)
-
-  if example == "mgga":
-
-    r_s = np.linspace(0.001, 2, 50)
-    r_s_dx = r_s[1] - r_s[0]
-    # add r_s = 100 (r_s -> \infty)
-    r_s = np.append(r_s, 100)
-    s = np.linspace(0, 5, 50)
-    alpha = np.linspace(0, 5, 50)
-    zeta = np.linspace(0, 1.0, 50)
-
-    input = np.meshgrid(r_s, s, zeta, alpha, indexing='ij')
-    eps_c = mgga_c("MGGA_C_SCAN", *input)
-
-    cond_satisfied, ranges = deriv_upper_bd_check_1(input, eps_c, r_s_dx)
-
-    print(cond_satisfied)
-    if ranges is not None:
-      for r in ranges:
-        print(r)
+  print(f"Condition satisified: {cond_satisfied}")
+  if ranges is not None:
+    for r in ranges:
+      print(r)
