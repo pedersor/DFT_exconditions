@@ -28,12 +28,11 @@ if 'mgga_c_' in xc:
   if func_c._needs_laplacian:
 
     r_s = np.linspace(0.0001, 5, 3000)
+    r_s_dx = r_s[1] - r_s[0]
     s = np.linspace(0, 5, 100)
     zeta = np.linspace(0, 1, 20)
     alpha = np.linspace(0, 5, 10)
     q = np.linspace(0, 5, 50)
-
-    r_s_dx = r_s[1] - r_s[0]
 
     # split up to reduce memory
     s_splits = np.split(s, 20)
@@ -45,7 +44,8 @@ if 'mgga_c_' in xc:
       #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
       #    input, eps_c, r_s_dx)
       #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
-      split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
+      split_cond_satisfied, ranges = test_suite.negativity_check(
+          input, eps_c, r_s_dx)
 
       del input
       del eps_c
@@ -67,11 +67,10 @@ if 'mgga_c_' in xc:
   else:
 
     r_s = np.linspace(0.0001, 5, 3000)
+    r_s_dx = r_s[1] - r_s[0]
     s = np.linspace(0, 5, 100)
     zeta = np.linspace(0, 1, 20)
     alpha = np.linspace(0, 5, 100)
-
-    r_s_dx = r_s[1] - r_s[0]
 
     # split up to reduce memory
     s_splits = np.split(s, 20)
@@ -80,10 +79,8 @@ if 'mgga_c_' in xc:
 
       input = np.meshgrid(r_s, s_split, zeta, alpha, indexing='ij')
       eps_c = test_suite.mgga_c(xc, *input)
-      #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
-      #    input, eps_c, r_s_dx)
-      #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
-      split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
+      split_cond_satisfied, ranges = test_suite.negativity_check(
+          input, eps_c, r_s_dx)
 
       del input
       del eps_c
@@ -110,10 +107,10 @@ elif 'gga_c_' in xc:
   range_labels = range_labels[:3]
 
   r_s = np.linspace(0.0001, 5, 5000)
+  r_s_dx = r_s[1] - r_s[0]
   s = np.linspace(0, 5, 500)
   zeta = np.linspace(0, 1, 100)
 
-  r_s_dx = r_s[1] - r_s[0]
   s_splits = np.split(s, 20)
 
   cond_satisfied = True
@@ -121,10 +118,8 @@ elif 'gga_c_' in xc:
     input = np.meshgrid(r_s, s_split, zeta, indexing='ij')
 
     eps_c = test_suite.gga_c(xc, *input)
-    #split_cond_satisfied, ranges = test_suite.deriv_upper_bd_check(
-    #    input, eps_c, r_s_dx)
-    #split_cond_satisfied, ranges = test_suite.deriv_check(input, eps_c)
-    split_cond_satisfied, ranges = test_suite.negativity_check(input, eps_c)
+    split_cond_satisfied, ranges = test_suite.negativity_check(
+        input, eps_c, r_s_dx)
 
     del input
     del eps_c

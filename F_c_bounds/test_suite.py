@@ -6,22 +6,29 @@ import matplotlib.pyplot as plt
 
 
 def get_density(r_s):
+  """ Obtains density n from r_s."""
   return 3 / (4 * np.pi * (r_s**3))
 
 
 def hartree_to_mRy(energy):
+  """ Hartree to mRy units conversion."""
+
   return energy * 2 * 1000
 
 
 def get_eps_x_unif(n):
+  """ Uniform gas exchange energy per particle. """
   return -(3 / (4 * np.pi)) * ((n * 3 * np.pi**2)**(1 / 3))
 
 
 def get_grad_n(s, n):
+  """ Obtain |\nabla n| from reduced gradient, s. """
   return s * (2 * ((3 * np.pi**2)**(1 / 3)) * (n**(4 / 3)))
 
 
 def get_up_dn_density(n, zeta):
+  """Obtains [n_up, n_dn]"""
+
   n = np.expand_dims(n, axis=1)
   zeta = np.expand_dims(zeta, axis=1)
 
@@ -33,10 +40,15 @@ def get_up_dn_density(n, zeta):
 
 
 def zeta_coeffs(zeta):
+  """ Coefficients relating n_sigma to zeta."""
+
   return (1 + zeta) / 2, (1 - zeta) / 2
 
 
 def get_tau(alpha, grad_n, n, zeta):
+  """ Obtains [tau_up, tau_dn] where 
+  tau_sigma = 1/2 \sum_i^occ |\nabla \phi_{sigma i}|^2 ."""
+
   tau_w = (grad_n**2) / (8 * n)
   tau_unif = (3 / 10) * ((3 * np.pi**2)**(2 / 3)) * (n**(5 / 3))
   d_s = ((1 + zeta)**(5 / 3) + (1 - zeta)**(5 / 3)) / 2
@@ -52,6 +64,7 @@ def get_tau(alpha, grad_n, n, zeta):
 
 
 def get_sigma(grad_n, zeta):
+  """ Obtains [\nabla n_up * \nabla n_up, \nabla n_up * \nabla n_dn, \nabla n_dn * \nabla n_dn]"""
 
   sigma = np.expand_dims(grad_n**2, axis=1)
 
@@ -66,7 +79,8 @@ def get_sigma(grad_n, zeta):
 
 
 def get_lapl(q, n, zeta):
-  # q is reduced density Laplacian. Eq. 14 in PhysRevA.96.052512
+  """ Obtains laplacian [\nabla^2 n_up, \nabla^2 n_dn]. 
+  q is reduced density Laplacian. Eq. 14 in PhysRevA.96.052512"""
 
   n = np.expand_dims(n, axis=1)
   q = np.expand_dims(q, axis=1)
@@ -84,6 +98,12 @@ def get_lapl(q, n, zeta):
 
 
 def lda_c(func_id, r_s, zeta):
+  """ Obtains correlation energy per particle for LDA-type functionals: 
+
+  \epsilon_c^{LDA}(r_s, \zeta) .
+
+  """
+
   func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
   input = (r_s, zeta)
@@ -104,6 +124,11 @@ def lda_c(func_id, r_s, zeta):
 
 
 def gga_c(func_id, r_s, s, zeta):
+  """ Obtains correlation energy per particle for GGA-type functionals:
+
+  \epsilon_c^{GGA}(r_s, s, \zeta, \alpha) .
+
+  """
 
   func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
@@ -128,6 +153,12 @@ def gga_c(func_id, r_s, s, zeta):
 
 
 def mgga_c(func_id, r_s, s, zeta, alpha, q=None):
+  """ Obtains correlation energy per particle for MGGA-type functionals 
+  (without laplacian):
+  
+  \epsilon_c^{MGGA}(r_s, s, \zeta, \alpha) .
+  
+  """
 
   func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
@@ -154,6 +185,12 @@ def mgga_c(func_id, r_s, s, zeta, alpha, q=None):
 
 
 def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
+  """ Obtains correlation energy per particle for MGGA-type functionals 
+  with laplacian:
+
+  \epsilon_c^{MGGA}(r_s, s, \zeta, \alpha, q) .
+
+  """
 
   input = (r_s, s, zeta, alpha, q)
   input = (feature.flatten() for feature in input)
@@ -165,7 +202,6 @@ def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
   rho = get_up_dn_density(n, zeta)
   tau = get_tau(alpha, grad_n, n, zeta)
   sigma = get_sigma(grad_n, zeta)
-
   lapl = get_lapl(q, n, zeta)
 
   inp = {}
@@ -180,7 +216,10 @@ def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
   return eps_c
 
 
-def deriv_lower_bd_check(input, eps_c, tol=1e-5):
+def deriv_lower_bd_check(input, eps_c, r_s_dx, tol=1e-5):
+  """
+  0 <= d F_c / dr_s
+  """
 
   n = get_density(input[0])
   eps_x_unif = get_eps_x_unif(n)
@@ -204,7 +243,20 @@ def deriv_lower_bd_check(input, eps_c, tol=1e-5):
   return cond_satisfied, ranges
 
 
-def deriv_upper_bd_check(input, eps_c, r_s_dx, tol=1e-3):
+def deriv_upper_bd_check_1(input, eps_c, r_s_dx, tol=1e-3):
+  """ 
+  d F_c / dr_s <= (F_c[r_s->\infty, ...] - F_c[r_s, ...]) / r_s 
+  """
+
+  return NotImplementedError
+
+
+def deriv_upper_bd_check_2(input, eps_c, r_s_dx, tol=1e-3):
+  """ 
+  d F_c / dr_s <= F_c / r_s .
+  
+  Note: sufficient condition to satisfy the unproven result T_c[n] <= -E_c[n].
+  """
 
   r_s_mesh = input[0]
   n = get_density(r_s_mesh)
@@ -233,7 +285,43 @@ def deriv_upper_bd_check(input, eps_c, r_s_dx, tol=1e-3):
   return cond_satisfied, ranges
 
 
-def negativity_check(input, eps_c, tol=1e-5):
+def second_deriv_check(input, eps_c, r_s_dx, tol=1e-3):
+  """ d^2 F_c / dr_s^2 >= (-2/r_s) d F_c / dr_s . """
+
+  r_s_mesh = input[0]
+  n = get_density(r_s_mesh)
+  eps_x_unif = get_eps_x_unif(n)
+
+  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
+
+  f_c_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
+  f_c_2grad = np.diff(f_c, 2, axis=0) / (r_s_dx**2)
+
+  r_s_mesh = r_s_mesh[1:-1]
+  f_c_grad = f_c_grad[1:-1]
+
+  up_bd_regions = np.where(
+      f_c_2grad + (2 * f_c_grad / r_s_mesh) < tol,
+      True,
+      False,
+  )
+
+  # finite differences at end points may be inaccurate
+  cond_satisfied = not np.any(up_bd_regions[3:-3])
+
+  if not cond_satisfied:
+    ranges = ([
+        np.amin(feature[1:-1][up_bd_regions]),
+        np.amax(feature[1:-1][up_bd_regions])
+    ] for feature in input)
+  else:
+    ranges = None
+
+  return cond_satisfied, ranges
+
+
+def negativity_check(input, eps_c, r_s_dx, tol=1e-5):
+  """ F_c >= 0 ."""
 
   r_s_mesh = input[0]
   eps_c = eps_c.reshape(r_s_mesh.shape)
@@ -260,17 +348,14 @@ if __name__ == '__main__':
 
   if example == "mgga_c_lapl":
 
-    r_s = np.linspace(0.0001, 2, 500)
-
     r_s = np.linspace(0.0001, 0.1, 50)
-
+    r_s_dx = r_s[1] - r_s[0]
     s = np.linspace(0, 5, 10)
     alpha = np.linspace(0, 5, 10)
     zeta = np.linspace(0, 1.0, 10)
     q = np.linspace(0, 5.0, 50)
 
     input = np.meshgrid(r_s, s, zeta, alpha, q, indexing='ij')
-
     func_id = "MGGA_C_SCANL"
     func_c = pylibxc.LibXCFunctional(func_id, "polarized")
     eps_c = mgga_c_lapl(func_c, *input)
@@ -284,13 +369,13 @@ if __name__ == '__main__':
 
   if example == 'lda':
     r_s = np.linspace(0.0001, 2, 5000)
+    r_s_dx = r_s[1] - r_s[0]
     zeta = np.linspace(0, 1.0, 50)
 
     input = np.meshgrid(r_s, zeta, indexing='ij')
-
     eps_c = lda_c("lda_c_pw", *input)
 
-    cond_satisfied, ranges = deriv_lower_bd_check(input, eps_c)
+    cond_satisfied, ranges = deriv_lower_bd_check(input, eps_c, r_s_dx)
 
     print(cond_satisfied)
     if ranges is not None:
@@ -299,14 +384,14 @@ if __name__ == '__main__':
 
   if example == 'gga':
     r_s = np.linspace(0.0001, 2, 1000)
+    r_s_dx = r_s[1] - r_s[0]
     s = np.linspace(0, 5, 50)
     zeta = np.linspace(0, 1, 50)
     input = np.meshgrid(r_s, s, zeta, indexing='ij')
 
-    eps_c = gga_c("gga_c_pw91", *input)
+    eps_c = gga_c("gga_c_pbe", *input)
 
-    r_s_dx = r_s[1] - r_s[0]
-    cond_satisfied, ranges = negativity_check(input, eps_c)
+    cond_satisfied, ranges = second_deriv_check(input, eps_c, r_s_dx)
 
     print(cond_satisfied)
     if ranges is not None:
@@ -316,18 +401,15 @@ if __name__ == '__main__':
   if example == "mgga":
 
     r_s = np.linspace(0.001, 2, 50)
-
+    r_s_dx = r_s[1] - r_s[0]
     s = np.linspace(0, 5, 50)
     alpha = np.linspace(0, 5, 50)
     zeta = np.linspace(0, 1.0, 50)
 
     input = np.meshgrid(r_s, s, zeta, alpha, indexing='ij')
-
     eps_c = mgga_c("MGGA_C_SCAN", *input)
 
-    r_s_dx = r_s[1] - r_s[0]
-    cond_satisfied, ranges = negativity_check(input, eps_c)
-    #cond_satisfied, ranges = deriv_check(input, eps_c)
+    cond_satisfied, ranges = second_deriv_check(input, eps_c, r_s_dx)
 
     print(cond_satisfied)
     if ranges is not None:
