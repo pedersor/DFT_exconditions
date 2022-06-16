@@ -299,8 +299,8 @@ def deriv_upper_bd_check_1(input, eps_c, r_s_dx, tol=1e-3):
 
   if not cond_satisfied:
     ranges = ([
-        np.amin(feature[up_bd_regions]),
-        np.amax(feature[up_bd_regions])
+        np.amin(feature[:-1][up_bd_regions]),
+        np.amax(feature[:-1][up_bd_regions])
     ] for feature in input)
   else:
     ranges = None
