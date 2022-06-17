@@ -7,10 +7,10 @@ import pylibxc
 xc_funcs = pylibxc.util.xc_available_functional_names()
 
 # out directory
-out_dir = Path('deriv_upper_bd_check_1')
+out_dir = Path('second_deriv_check')
 out_dir.mkdir(parents=True, exist_ok=True)
 
-func_types = ['gga_c_, mgga_c_']
+func_types = ['gga_c_', 'mgga_c_']
 
 for func_type in func_types:
   for xc_func in xc_funcs:
