@@ -8,8 +8,11 @@ import pylibxc
 import test_suite
 
 xc = sys.argv[1]
+cond_to_check = test_suite.deriv_upper_bd_check_1
+
 func_c = pylibxc.LibXCFunctional(xc, "polarized")
-print(f"running {xc} ...", flush=True)
+print(f"running: {xc}", flush=True)
+print(f"checking condition: {cond_to_check.__name__}", flush=True)
 
 df = {
     'xc': [xc],
@@ -35,14 +38,14 @@ if 'mgga_c_' in xc:
     q = np.linspace(0, 5, 50)
 
     # split up to reduce memory
-    s_splits = np.split(s, 20)
+    s_splits = np.split(s, 100)
     cond_satisfied = True
     for s_split in s_splits:
 
       input = [r_s, s_split, zeta, alpha, q]
       split_cond_satisfied, ranges = test_suite.check_condition(
           xc,
-          test_suite.deriv_upper_bd_check_1,
+          cond_to_check,
           input,
       )
 
@@ -64,20 +67,20 @@ if 'mgga_c_' in xc:
 
   else:
 
-    r_s = np.linspace(0.0001, 5, 3000)
+    r_s = np.linspace(0.0001, 5, 5000)
     s = np.linspace(0, 5, 100)
     zeta = np.linspace(0, 1, 20)
     alpha = np.linspace(0, 5, 100)
 
     # split up to reduce memory
-    s_splits = np.split(s, 20)
+    s_splits = np.split(s, 50)
     cond_satisfied = True
     for s_split in s_splits:
 
       input = [r_s, s_split, zeta, alpha]
       split_cond_satisfied, ranges = test_suite.check_condition(
           xc,
-          test_suite.deriv_upper_bd_check_1,
+          cond_to_check,
           input,
       )
 
@@ -104,18 +107,18 @@ elif 'gga_c_' in xc:
 
   range_labels = range_labels[:3]
 
-  r_s = np.linspace(0.0001, 5, 5000)
+  r_s = np.linspace(0.0001, 5, 10000)
   s = np.linspace(0, 5, 500)
   zeta = np.linspace(0, 1, 100)
 
-  s_splits = np.split(s, 20)
+  s_splits = np.split(s, 100)
 
   cond_satisfied = True
   for s_split in s_splits:
     input = [r_s, s_split, zeta]
     split_cond_satisfied, ranges = test_suite.check_condition(
         xc,
-        test_suite.deriv_upper_bd_check_1,
+        cond_to_check,
         input,
     )
 
