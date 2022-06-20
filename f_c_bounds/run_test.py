@@ -8,7 +8,15 @@ import pylibxc
 import test_suite
 
 xc = sys.argv[1]
-cond_to_check = test_suite.second_deriv_check
+
+conditions = {
+    "negativity_check": test_suite.negativity_check,
+    "deriv_lower_bd_check": test_suite.deriv_lower_bd_check,
+    "deriv_upper_bd_check_1": test_suite.deriv_upper_bd_check_1,
+    "deriv_upper_bd_check_2": test_suite.deriv_upper_bd_check_2,
+    "second_deriv_check": test_suite.second_deriv_check,
+}
+cond_to_check = conditions[sys.argv[2]]
 
 func_c = pylibxc.LibXCFunctional(xc, "polarized")
 print(f"running: {xc}", flush=True)
