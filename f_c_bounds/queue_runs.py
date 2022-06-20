@@ -4,13 +4,14 @@ from pathlib import Path
 
 import pylibxc
 
+func_types = ['gga_c_', 'mgga_c_']
+cond_to_check = 'deriv_lower_bd_check'
+
 xc_funcs = pylibxc.util.xc_available_functional_names()
 
 # out directory
-out_dir = Path('deriv_upper_bd_check_1')
+out_dir = Path(cond_to_check)
 out_dir.mkdir(parents=True, exist_ok=True)
-
-func_types = ['gga_c_', 'mgga_c_']
 
 for func_type in func_types:
   for xc_func in xc_funcs:
@@ -35,7 +36,7 @@ for func_type in func_types:
 
             ml purge
             ml miniconda/3/own
-            srun python {run_file} {xc_func}
+            srun python {run_file} {xc_func} {cond_to_check}
 
         """)
 
