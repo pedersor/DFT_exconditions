@@ -358,7 +358,7 @@ def second_deriv_check(input, eps_c, r_s_dx, tol=1e-3):
   f_c_grad = f_c_grad[1:-1]
 
   up_bd_regions = np.where(
-      f_c_2grad + (2 * f_c_grad / r_s_mesh) < tol,
+      f_c_2grad + (2 * f_c_grad / r_s_mesh) < -tol,
       True,
       False,
   )
