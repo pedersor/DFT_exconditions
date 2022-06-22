@@ -5,7 +5,7 @@ from pathlib import Path
 import pylibxc
 
 func_types = ['gga_c_', 'mgga_c_']
-cond_to_check = 'deriv_lower_bd_check'
+cond_to_check = 'second_deriv_check'
 
 xc_funcs = pylibxc.util.xc_available_functional_names()
 

@@ -1,2 +1,5 @@
 __pycache__
 tmp*
+*slurm*
+*.job
+*_c_*.csv
