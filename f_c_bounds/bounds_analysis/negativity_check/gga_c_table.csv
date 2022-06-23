@@ -9,13 +9,13 @@ chachiyo,True,---,---,---,\cite{Chachiyo2020_112669}
 cs1,False,[1.e-04 5.e+00],[1.5331 5.    ],[0. 1.],"\cite{Handy2002_5411,Proynov2006_436}"
 ft97,True,---,---,---,"\cite{Filatov1997_603,Filatov1997_847}"
 gam,False,[1.e-04 5.e+00],[0.2505 5.    ],[0. 1.],\cite{Yu2015_12146}
-gapc,False,[1.000e-04 1.681e-01],[0.6914 5.    ],[0. 1.],\cite{Fabiano2014_2016}
-gaploc,False,[0.0031 0.1701],[0.4509 5.    ],[0.0303 1.    ],\cite{Fabiano2014_2016}
+gapc,False,[1.000e-04 1.686e-01],[0.6914 5.    ],[0. 1.],\cite{Fabiano2014_2016}
+gaploc,False,[0.0026 0.1701],[0.4509 5.    ],[0.0202 1.    ],\cite{Fabiano2014_2016}
 hcth\_a,False,[1.e-04 5.e+00],[2.1443 5.    ],[0.     0.9495],\cite{Hamprecht1998_6264}
 hyb\_tau\_hcth,False,[1.e-04 5.e+00],[1.5431 5.    ],[0.     0.9596],\cite{Boese2002_9559}
 lm,True,---,---,---,"\cite{Langreth1981_446,Hu1985_391}"
 lyp,False,[1.e-04 5.e+00],[1.7435 5.    ],[0.     0.9899],"\cite{Lee1988_785,Miehlich1989_200}"
-lypr,False,[1.0000e-04 3.3837e+00],[1.7535 5.    ],[0.     0.9899],\cite{Ai2021_1207}
+lypr,False,[1.0000e-04 3.3839e+00],[1.7535 5.    ],[0.     0.9899],\cite{Ai2021_1207}
 mggac,True,---,---,---,\cite{Patra2019_155140}
 n12,True,---,---,---,\cite{Peverati2012_2310}
 n12\_sx,False,[1.e-04 5.e+00],[0.9319 5.    ],[0. 1.],\cite{Peverati2012_16187}
@@ -23,11 +23,11 @@ op\_b88,True,---,---,---,\cite{Tsuneda1999_10664}
 op\_g96,True,---,---,---,"\cite{Tsuneda1999_10664,Tsuneda1999_5656}"
 op\_pbe,True,---,---,---,"\cite{Tsuneda1999_10664,Tsuneda1999_5656}"
 op\_pw91,True,---,---,---,"\cite{Tsuneda1999_10664,Tsuneda1999_5656}"
-optc,False,[0.0001 0.0001],[0.0401 0.2705],[0.     0.9899],\cite{Cohen2001_607}
+optc,False,[0.0001 0.0006],[0.0401 0.2705],[0.     0.9899],\cite{Cohen2001_607}
 op\_xalpha,True,---,---,---,"\cite{Tsuneda1999_10664,Tsuneda1999_5656}"
 p86,False,[0.2331 5.    ],[0.8918 5.    ],[0. 1.],\cite{Perdew1986_8822}
-p86\_ft,False,[0.2341 5.    ],[0.8918 5.    ],[0. 1.],\cite{Perdew1986_8822}
-p86vwn,False,[0.2251 5.    ],[0.8818 5.    ],[0. 1.],\cite{Perdew1986_8822}
+p86\_ft,False,[0.2336 5.    ],[0.8918 5.    ],[0. 1.],\cite{Perdew1986_8822}
+p86vwn,False,[0.2246 5.    ],[0.8818 5.    ],[0. 1.],\cite{Perdew1986_8822}
 p86vwn\_ft,False,[0.2251 5.    ],[0.8818 5.    ],[0. 1.],\cite{Perdew1986_8822}
 pbe,True,---,---,---,"\cite{Perdew1996_3865,Perdew1996_3865_err}"
 pbefe,True,---,---,---,\cite{Perez2015_3844}
@@ -37,7 +37,7 @@ pbeloc,True,---,---,---,\cite{Constantin2012_035130}
 pbe\_mol,True,---,---,---,\cite{delCampo2012_104108}
 pbe\_sol,True,---,---,---,\cite{Perdew2008_136406}
 pbe\_vwn,True,---,---,---,"\cite{Kraisler2010_042516,Perdew1996_3865,Perdew1996_3865_err}"
-pw91,False,[0.0001 0.0001],[0.0401 0.2806],[0. 1.],"\cite{Perdew1991,Perdew1992_6671,Perdew1992_6671_err}"
+pw91,False,[0.0001 0.0006],[0.0401 0.2806],[0. 1.],"\cite{Perdew1991,Perdew1992_6671,Perdew1992_6671_err}"
 q2d,True,---,---,---,\cite{Chiodo2012_126402}
 regtpss,True,---,---,---,\cite{Perdew2009_026403}
 revtca,True,---,---,---,\cite{Tognetti2008_536}

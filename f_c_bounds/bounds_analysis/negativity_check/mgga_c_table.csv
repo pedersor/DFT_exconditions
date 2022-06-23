@@ -1,6 +1,8 @@
 MGGA corr.,satisfied condition?,$r_s$ range,$s$ range,$\zeta$ range,$\alpha$ range,$q$ range ,Refs.
 b88,True,---,---,---,---,---,\cite{Becke1988_1053}
+b94,True,---,---,---,---,---,\cite{Becke1994_625}
 bc95,True,---,---,---,---,---,\cite{Becke1996_1040}
+cs,False,[1.e-04 5.e+00],[1.2626 5.    ],[0.     0.9474],[0. 5.],[0. 5.],"\cite{Colle1975_329,Lee1988_785}"
 dldf,False,[1.e-04 5.e+00],[1.2121 5.    ],[0.     0.9474],[0. 5.],---,\cite{Pernal2009_263201}
 hltapw,True,---,---,---,---,---,\cite{Lehtola2021_943}
 kcis,True,---,---,---,---,---,"\cite{Rey1998_581,Krieger1999_463,Krieger2001_48,Kurth1999_889,Toulouse2002_10465}"
@@ -20,8 +22,9 @@ mn12\_l,False,[1.e-04 5.e+00],[0.101  3.4848],[0. 1.],[0. 5.],---,\cite{Peverati
 mn12\_sx,False,[1.e-04 5.e+00],[0.     2.1212],[0. 1.],[0. 5.],---,\cite{Peverati2012_16187}
 mn15,False,[1.e-04 5.e+00],[0.0505 5.    ],[0. 1.],[0. 5.],---,\cite{Yu2016_5032}
 mn15\_l,False,[1.e-04 5.e+00],[0.0505 3.9394],[0. 1.],[0. 5.],---,\cite{Yu2016_1280}
-pkzb,False,[0.0001 0.0084],[0.6566 4.798 ],[0.9474 0.9474],[0.     1.9192],---,\cite{Perdew1999_2544}
+pkzb,False,[0.0001 0.0091],[0.6566 4.798 ],[0.9474 0.9474],[0.     1.9192],---,\cite{Perdew1999_2544}
 r2scan,True,---,---,---,---,---,"\cite{Furness2020_8208,Furness2020_9248}"
+r2scanl,True,---,---,---,---,---,"\cite{Mejia2020_121109,Furness2020_8208,Furness2020_9248}"
 revm06,False,[1.e-04 5.e+00],[0. 5.],[0. 1.],[0. 5.],---,\cite{Wang2018_10257}
 revm06\_l,False,[1.e-04 5.e+00],[0. 5.],[0. 1.],[0. 5.],---,\cite{Wang2017_8487}
 revm11,False,[1.e-04 5.e+00],[0.     1.9697],[0. 1.],[0.     1.9192],---,\cite{Verma2019_2966}
@@ -31,6 +34,9 @@ revtm,True,---,---,---,---,---,\cite{Jana2019_6356}
 revtpss,True,---,---,---,---,---,"\cite{Perdew2009_026403,Perdew2009_026403_err}"
 rscan,True,---,---,---,---,---,\cite{Bartok2019_161101}
 scan,True,---,---,---,---,---,\cite{Sun2015_036402}
+scanl,True,---,---,---,---,---,"\cite{Mejia2017_052512,Mejia2018_115161,Sun2015_036402}"
+scanl\_rvv10,True,---,---,---,---,---,"\cite{Mejia2017_052512,Mejia2018_115161,Peng2016_041005}"
+scanl\_vv10,True,---,---,---,---,---,"\cite{Mejia2017_052512,Mejia2018_115161,Brandenburg2016_115144}"
 scan\_rvv10,True,---,---,---,---,---,\cite{Peng2016_041005}
 scan\_vv10,True,---,---,---,---,---,\cite{Brandenburg2016_115144}
 tm,True,---,---,---,---,---,\cite{Tao2016_073001}
