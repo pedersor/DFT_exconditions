@@ -97,7 +97,7 @@ def get_lapl(q, n, zeta):
 # end defintions ====
 
 
-def lda_c(func_c, r_s, zeta):
+def lda_xc(func_c, r_s, zeta):
   """ Obtains correlation energy per particle for LDA-type functionals: 
 
   \epsilon_c^{LDA}(r_s, \zeta) .
@@ -121,7 +121,7 @@ def lda_c(func_c, r_s, zeta):
   return eps_c
 
 
-def gga_c(func_c, r_s, s, zeta):
+def gga_xc(func_c, r_s, s, zeta):
   """ Obtains correlation energy per particle for GGA-type functionals:
 
   \epsilon_c^{GGA}(r_s, s, \zeta, \alpha) .
@@ -148,7 +148,7 @@ def gga_c(func_c, r_s, s, zeta):
   return eps_c
 
 
-def mgga_c(func_c, r_s, s, zeta, alpha, q=None):
+def mgga_xc(func_c, r_s, s, zeta, alpha, q=None):
   """ Obtains correlation energy per particle for MGGA-type functionals 
   (without laplacian):
   
@@ -178,7 +178,7 @@ def mgga_c(func_c, r_s, s, zeta, alpha, q=None):
   return eps_c
 
 
-def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
+def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
   """ Obtains correlation energy per particle for MGGA-type functionals 
   with laplacian:
 
@@ -210,24 +210,29 @@ def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
   return eps_c
 
 
-def get_eps_c(func_id, input):
+def get_eps_xc(func_id, input):
 
-  func_c = pylibxc.LibXCFunctional(func_id, "polarized")
+  func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
 
-  if 'mgga_c_' in func_id:
-    if func_c._needs_laplacian:
-      return mgga_c_lapl(func_c, *input)
+  if 'mgga_' in func_id:
+    if func_xc._needs_laplacian:
+      return mgga_xc_lapl(func_xc, *input)
     else:
-      return mgga_c(func_c, *input)
-  elif 'gga_c_' in func_id:
-    return gga_c(func_c, *input)
-  elif 'lda_c_' in func_id:
-    return lda_c(func_c, *input)
+      return mgga_xc(func_xc, *input)
+  elif 'gga_' in func_id:
+    return gga_xc(func_xc, *input)
+  elif 'lda_' in func_id:
+    return lda_xc(func_xc, *input)
 
   return NotImplementedError(f"functional {func_id} not supported.")
 
 
-def check_condition(func_id, condition, input, tol=None):
+def check_condition(
+    func_id,
+    condition,
+    input,
+    tol=None,
+):
 
   r_s = input[0]
   if condition.__name__ == 'deriv_upper_bd_check_1':
@@ -236,7 +241,12 @@ def check_condition(func_id, condition, input, tol=None):
 
   r_s_dx = r_s[1] - r_s[0]
   input = np.meshgrid(*input, indexing='ij')
-  eps_c = get_eps_c(func_id, input)
+  eps_c = get_eps_xc(func_id, input)
+
+  if 'lieb_oxford_bd_check' in condition.__name__:
+    func_id_x = func_id.replace('_c_', '_x_')
+    eps_x = get_eps_xc(func_id_x, input)
+    eps_c = (eps_x, eps_c)
 
   if tol:
     result = condition(input, eps_c, r_s_dx, tol)
@@ -245,6 +255,96 @@ def check_condition(func_id, condition, input, tol=None):
     result = condition(input, eps_c, r_s_dx)
 
   return result
+
+
+def lieb_oxford_bd_check_Uxc(
+    input,
+    eps_x_c,
+    r_s_dx,
+    tol=1e-3,
+    lieb_oxford_bd_const=2.27,
+):
+  """ 
+  original Lieb-Oxford bound on Uxc:
+
+  F_xc +  r_s (d F_c / dr_s) <= C 
+  
+  """
+
+  eps_x, eps_c = eps_x_c
+
+  r_s_mesh = input[0]
+  n = get_density(r_s_mesh)
+  eps_x_unif = get_eps_x_unif(n)
+
+  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
+  f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
+
+  f_x = eps_x.reshape(r_s_mesh.shape) / eps_x_unif
+  f_xc = f_c + f_x
+
+  up_bd_regions = np.where(
+      (r_s_mesh * f_c_deriv) + f_xc > lieb_oxford_bd_const + tol,
+      True,
+      False,
+  )
+
+  # finite differences at end points may be inaccurate
+  cond_satisfied = not np.any(up_bd_regions[3:-3])
+
+  if not cond_satisfied:
+    ranges = ([
+        np.amin(feature[up_bd_regions]),
+        np.amax(feature[up_bd_regions])
+    ] for feature in input)
+  else:
+    ranges = None
+
+  return cond_satisfied, ranges
+
+
+def lieb_oxford_bd_check_Exc(
+    input,
+    eps_x_c,
+    r_s_dx,
+    tol=1e-3,
+    lieb_oxford_bd_const=2.27,
+):
+  """ 
+  original Lieb-Oxford bound on Exc:
+
+  F_xc <= C 
+  
+  """
+
+  eps_x, eps_c = eps_x_c
+
+  r_s_mesh = input[0]
+  n = get_density(r_s_mesh)
+  eps_x_unif = get_eps_x_unif(n)
+
+  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
+  f_x = eps_x.reshape(r_s_mesh.shape) / eps_x_unif
+  f_xc = f_c + f_x
+
+  up_bd_regions = np.where(
+      f_xc > lieb_oxford_bd_const + tol,
+      True,
+      False,
+  )
+
+  # finite differences at end points may be inaccurate
+  cond_satisfied = not np.any(up_bd_regions[3:-3])
+
+  if not cond_satisfied:
+    ranges = ([
+        np.amin(feature[up_bd_regions]),
+        np.amax(feature[up_bd_regions])
+    ] for feature in input)
+  else:
+    ranges = None
+
+  return cond_satisfied, ranges
 
 
 def deriv_lower_bd_check(input, eps_c, r_s_dx, tol=1e-5):

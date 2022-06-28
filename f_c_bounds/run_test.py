@@ -15,6 +15,8 @@ conditions = {
     "deriv_upper_bd_check_1": test_suite.deriv_upper_bd_check_1,
     "deriv_upper_bd_check_2": test_suite.deriv_upper_bd_check_2,
     "second_deriv_check": test_suite.second_deriv_check,
+    "lieb_oxford_bd_check_Uxc": test_suite.lieb_oxford_bd_check_Uxc,
+    "lieb_oxford_bd_check_Exc": test_suite.lieb_oxford_bd_check_Exc,
 }
 cond_to_check = conditions[sys.argv[2]]
 
