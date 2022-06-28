@@ -288,9 +288,8 @@ def deriv_upper_bd_check_1(input, eps_c, r_s_dx, tol=1e-3):
   r_s_mesh = r_s_mesh[:-1]
 
   f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
-  #TODO: don't divide by r_s...
   up_bd_regions = np.where(
-      f_c_deriv - ((f_c_inf - f_c) / r_s_mesh) > tol,
+      (r_s_mesh * f_c_deriv) - (f_c_inf - f_c) > tol,
       True,
       False,
   )
@@ -323,9 +322,8 @@ def deriv_upper_bd_check_2(input, eps_c, r_s_dx, tol=1e-3):
   f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
 
   regions_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
-  #TODO: don't divide by r_s...
   up_bd_regions = np.where(
-      regions_grad - (f_c / r_s_mesh) > tol,
+      (r_s_mesh * regions_grad) - f_c > tol,
       True,
       False,
   )
@@ -358,9 +356,8 @@ def second_deriv_check(input, eps_c, r_s_dx, tol=1e-3):
 
   r_s_mesh = r_s_mesh[1:-1]
   f_c_grad = f_c_grad[1:-1]
-  #TODO: don't divide by r_s...
   up_bd_regions = np.where(
-      f_c_2grad + (2 * f_c_grad / r_s_mesh) < -tol,
+      (r_s_mesh * f_c_2grad) + (2 * f_c_grad) < -tol,
       True,
       False,
   )
