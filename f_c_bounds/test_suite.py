@@ -210,7 +210,7 @@ def mgga_c_lapl(func_c, r_s, s, zeta, alpha, q):
   return eps_c
 
 
-def get_epc_c(func_id, input):
+def get_eps_c(func_id, input):
 
   func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
@@ -236,7 +236,7 @@ def check_condition(func_id, condition, input, tol=None):
 
   r_s_dx = r_s[1] - r_s[0]
   input = np.meshgrid(*input, indexing='ij')
-  eps_c = get_epc_c(func_id, input)
+  eps_c = get_eps_c(func_id, input)
 
   if tol:
     result = condition(input, eps_c, r_s_dx, tol)
@@ -288,6 +288,7 @@ def deriv_upper_bd_check_1(input, eps_c, r_s_dx, tol=1e-3):
   r_s_mesh = r_s_mesh[:-1]
 
   f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
+  #TODO: don't divide by r_s...
   up_bd_regions = np.where(
       f_c_deriv - ((f_c_inf - f_c) / r_s_mesh) > tol,
       True,
@@ -322,6 +323,7 @@ def deriv_upper_bd_check_2(input, eps_c, r_s_dx, tol=1e-3):
   f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
 
   regions_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
+  #TODO: don't divide by r_s...
   up_bd_regions = np.where(
       regions_grad - (f_c / r_s_mesh) > tol,
       True,
@@ -356,7 +358,7 @@ def second_deriv_check(input, eps_c, r_s_dx, tol=1e-3):
 
   r_s_mesh = r_s_mesh[1:-1]
   f_c_grad = f_c_grad[1:-1]
-
+  #TODO: don't divide by r_s...
   up_bd_regions = np.where(
       f_c_2grad + (2 * f_c_grad / r_s_mesh) < -tol,
       True,
