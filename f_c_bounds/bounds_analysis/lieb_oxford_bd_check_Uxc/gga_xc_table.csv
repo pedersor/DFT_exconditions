@@ -1,0 +1,18 @@
+GGA XC,satisfied condition?,$r_s$ range,$s$ range,$\zeta$ range ,Refs.
+gga\_c\_am05,True,---,---,---,"\cite{Armiento2005_085108,Mattsson2008_084714}"
+gga\_c\_apbe,True,---,---,---,\cite{Constantin2011_186406}
+gga\_c\_chachiyo,False,[1.e-04 5.e+00],[0. 5.],[0. 1.],\cite{Chachiyo2020_112669}
+gga\_c\_gam,False,[0.3741 5.    ],[2.7555 5.    ],[0. 1.],\cite{Yu2015_12146}
+gga\_c\_hcth\_a,True,---,---,---,\cite{Hamprecht1998_6264}
+gga\_c\_n12,False,[1.0000e-04 1.9103e+00],[1.7735 5.    ],[0. 1.],\cite{Peverati2012_2310}
+gga\_c\_pbe,True,---,---,---,"\cite{Perdew1996_3865,Perdew1996_3865_err}"
+gga\_c\_pbefe,True,---,---,---,\cite{Perez2015_3844}
+gga\_c\_pbeint,True,---,---,---,\cite{Fabiano2010_113104}
+gga\_c\_pbe\_mol,True,---,---,---,\cite{delCampo2012_104108}
+gga\_c\_pbe\_sol,True,---,---,---,\cite{Perdew2008_136406}
+gga\_c\_pw91,True,---,---,---,"\cite{Perdew1991,Perdew1992_6671,Perdew1992_6671_err}"
+gga\_c\_q2d,True,---,---,---,\cite{Chiodo2012_126402}
+gga\_c\_rge2,True,---,---,---,\cite{Ruzsinszky2009_763}
+gga\_c\_sg4,False,[1.0762 5.    ],[4.1483 5.    ],[0.8384 1.    ],\cite{Constantin2016_045126}
+gga\_c\_sogga11,False,[3.1769 5.    ],[4.99 5.  ],[0.     0.1515],\cite{Peverati2011_1991}
+gga\_c\_xpbe,True,---,---,---,\cite{Xu2004_4068}
