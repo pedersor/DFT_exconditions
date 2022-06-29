@@ -1,0 +1,18 @@
+xc,satisfied condition?,$r_s$ range,$s$ range,$\zeta$ range 
+gga_c_am05,True,---,---,---
+gga_c_apbe,True,---,---,---
+gga_c_chachiyo,False,"[0.0001, 5.0]","[0.0, 5.0]","[0.0, 1.0]"
+gga_c_gam,False,"[0.3796303630363036, 5.0]","[2.81563126252505, 5.0]","[0.0, 1.0]"
+gga_c_hcth_a,True,---,---,---
+gga_c_n12,False,"[0.0001, 1.7492399339933993]","[1.7735470941883766, 5.0]","[0.0, 1.0]"
+gga_c_pbe,True,---,---,---
+gga_c_pbefe,True,---,---,---
+gga_c_pbeint,True,---,---,---
+gga_c_pbe_mol,True,---,---,---
+gga_c_pbe_sol,True,---,---,---
+gga_c_pw91,True,---,---,---
+gga_c_q2d,True,---,---,---
+gga_c_rge2,True,---,---,---
+gga_c_sg4,False,"[2.4552964196419644, 5.0]","[4.569138276553106, 5.0]","[0.9292929292929294, 1.0]"
+gga_c_sogga11,True,---,---,---
+gga_c_xpbe,True,---,---,---
