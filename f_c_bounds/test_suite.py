@@ -103,7 +103,7 @@ def lda_xc(func_c, r_s, zeta):
   \epsilon_c^{LDA}(r_s, \zeta) .
 
   """
-
+  mesh_shape = r_s.shape
   input = (r_s, zeta)
   input = (feature.flatten() for feature in input)
   r_s, zeta = input
@@ -118,7 +118,7 @@ def lda_xc(func_c, r_s, zeta):
   func_c_res = func_c.compute(inp)
   eps_c = np.squeeze(func_c_res['zk'])
 
-  return eps_c
+  return eps_c.reshape(mesh_shape)
 
 
 def gga_xc(func_c, r_s, s, zeta):
@@ -127,7 +127,7 @@ def gga_xc(func_c, r_s, s, zeta):
   \epsilon_c^{GGA}(r_s, s, \zeta, \alpha) .
 
   """
-
+  mesh_shape = r_s.shape
   input = (r_s, s, zeta)
   input = (feature.flatten() for feature in input)
   r_s, s, zeta = input
@@ -145,7 +145,7 @@ def gga_xc(func_c, r_s, s, zeta):
   func_c_res = func_c.compute(inp)
   eps_c = np.squeeze(func_c_res['zk'])
 
-  return eps_c
+  return eps_c.reshape(mesh_shape)
 
 
 def mgga_xc(func_c, r_s, s, zeta, alpha, q=None):
@@ -155,7 +155,7 @@ def mgga_xc(func_c, r_s, s, zeta, alpha, q=None):
   \epsilon_c^{MGGA}(r_s, s, \zeta, \alpha) .
   
   """
-
+  mesh_shape = r_s.shape
   input = (r_s, s, zeta, alpha)
   input = (feature.flatten() for feature in input)
   r_s, s, zeta, alpha = input
@@ -175,7 +175,7 @@ def mgga_xc(func_c, r_s, s, zeta, alpha, q=None):
   func_c_res = func_c.compute(inp)
   eps_c = np.squeeze(func_c_res['zk'])
 
-  return eps_c
+  return eps_c.reshape(mesh_shape)
 
 
 def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
@@ -186,6 +186,7 @@ def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
 
   """
 
+  mesh_shape = r_s.shape
   input = (r_s, s, zeta, alpha, q)
   input = (feature.flatten() for feature in input)
   r_s, s, zeta, alpha, q = input
@@ -207,43 +208,69 @@ def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
   func_c_res = func_c.compute(inp)
   eps_c = np.squeeze(func_c_res['zk'])
 
-  return eps_c
+  return eps_c.reshape(mesh_shape)
 
 
-def get_eps_xc(func_id, input):
+def eps_to_enh_factor(input_mesh, eps_x_c):
+  """ convert: \epsilon_(x)c to F_(x)c ."""
+
+  r_s_mesh = input_mesh[0]
+  n = get_density(r_s_mesh)
+  eps_x_unif = get_eps_x_unif(n)
+
+  return eps_x_c / eps_x_unif
+
+
+def get_enh_factor_x_c(func_id, input):
 
   # hyb_c_func workaround
   if 'hyb_' in func_id and '_c_' in func_id:
     func_id = func_id.replace('_c_', '_xc_')
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
-    input_xc = np.meshgrid(*input, indexing='ij')
-    eps_xc = gga_xc(func_xc, *input_xc).reshape(input_xc[0].shape)
-    n = get_density(input_xc[0])
-    eps_x_unif = get_eps_x_unif(n)
+
+    input_mesh = np.meshgrid(*input, indexing='ij')
+    eps_xc = gga_xc(func_xc, *input_mesh)
+    f_xc = eps_to_enh_factor(input_mesh, eps_xc)
 
     # substract off exchange
     zero_r_s = np.array([0.00001])
-    input_xc = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
-    eps_x = gga_xc(func_xc, *input_xc).reshape(input_xc[0].shape)
+    input_mesh = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
+    eps_x = gga_xc(func_xc, *input_mesh)
+    f_x = eps_to_enh_factor(input_mesh, eps_x)
 
-    n = get_density(input_xc[0])
-    zero_eps_x_unif = get_eps_x_unif(n)
-    eps_c = eps_xc - (eps_x / zero_eps_x_unif) * eps_x_unif
+    f_c = f_xc - f_x
+    return f_c
+  # hyb_c_func workaround
+  elif 'hyb_' in func_id and '_x_' in func_id:
+    func_id = func_id.replace('_x_', '_xc_')
+    func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
 
-    return eps_c.flatten()
+    zero_r_s = np.array([0.00001])
+    input_mesh = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
+    eps_x = gga_xc(func_xc, *input_mesh)
+    f_x = eps_to_enh_factor(input_mesh, eps_x)
+    return f_x
   else:
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
-    input = np.meshgrid(*input, indexing='ij')
+    input_mesh = np.meshgrid(*input, indexing='ij')
 
   if 'mgga_' in func_id:
     if func_xc._needs_laplacian:
-      return mgga_xc_lapl(func_xc, *input)
+      eps_x_c = mgga_xc_lapl(func_xc, *input_mesh)
+      f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
+      return f_x_c
     else:
-      return mgga_xc(func_xc, *input)
+      eps_x_c = mgga_xc(func_xc, *input_mesh)
+      f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
+      return f_x_c
   elif 'gga_' in func_id:
-    return gga_xc(func_xc, *input)
+    eps_x_c = gga_xc(func_xc, *input_mesh)
+    f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
+    return f_x_c
   elif 'lda_' in func_id:
-    return lda_xc(func_xc, *input)
+    eps_x_c = lda_xc(func_xc, *input_mesh)
+    f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
+    return f_x_c
 
   return NotImplementedError(f"functional {func_id} not supported.")
 
@@ -255,32 +282,37 @@ def check_condition(
     tol=None,
 ):
 
+  func_id = func_id.lower().replace('_xc_', '_c_')
   r_s = input[0]
+  r_s_dx = r_s[1] - r_s[0]
+
   if condition.__name__ == 'deriv_upper_bd_check_1':
     # add r_s = 100 (to approximate r_s -> \infty)
     input[0] = np.append(r_s, 100)
 
-  r_s_dx = r_s[1] - r_s[0]
-  eps_c = get_eps_xc(func_id, input)
-
   if 'lieb_oxford_bd_check' in condition.__name__:
-    func_id_x = func_id.replace('_c_', '_x_')
-    eps_x = get_eps_xc(func_id_x, input)
-    eps_c = (eps_x, eps_c)
+    f_c = get_enh_factor_x_c(func_id, input)
 
-  input = np.meshgrid(*input, indexing='ij')
+    # get exchange
+    func_id_x = func_id.replace('_c_', '_x_')
+    f_x = get_enh_factor_x_c(func_id_x, input)
+    f_x_c = (f_x, f_c)
+  else:
+    f_x_c = get_enh_factor_x_c(func_id, input)
+
+  input_mesh = np.meshgrid(*input, indexing='ij')
   if tol:
-    result = condition(input, eps_c, r_s_dx, tol)
+    result = condition(input_mesh, f_x_c, r_s_dx, tol)
   else:
     # use default tol for condition
-    result = condition(input, eps_c, r_s_dx)
+    result = condition(input_mesh, f_x_c, r_s_dx)
 
   return result
 
 
 def lieb_oxford_bd_check_Uxc(
     input,
-    eps_x_c,
+    f_x_c,
     r_s_dx,
     tol=1e-3,
     lieb_oxford_bd_const=2.27,
@@ -291,17 +323,9 @@ def lieb_oxford_bd_check_Uxc(
   F_xc +  r_s (d F_c / dr_s) <= C 
   
   """
-
-  eps_x, eps_c = eps_x_c
-
   r_s_mesh = input[0]
-  n = get_density(r_s_mesh)
-  eps_x_unif = get_eps_x_unif(n)
-
-  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
+  f_x, f_c = f_x_c
   f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
-
-  f_x = eps_x.reshape(r_s_mesh.shape) / eps_x_unif
   f_xc = f_c + f_x
 
   up_bd_regions = np.where(
@@ -326,26 +350,19 @@ def lieb_oxford_bd_check_Uxc(
 
 def lieb_oxford_bd_check_Exc(
     input,
-    eps_x_c,
+    f_x_c,
     r_s_dx,
     tol=1e-3,
     lieb_oxford_bd_const=2.27,
 ):
   """ 
-  original Lieb-Oxford bound on Exc:
+  Lieb-Oxford bound on Exc:
 
   F_xc <= C 
   
   """
 
-  eps_x, eps_c = eps_x_c
-
-  r_s_mesh = input[0]
-  n = get_density(r_s_mesh)
-  eps_x_unif = get_eps_x_unif(n)
-
-  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
-  f_x = eps_x.reshape(r_s_mesh.shape) / eps_x_unif
+  f_x, f_c = f_x_c
   f_xc = f_c + f_x
 
   up_bd_regions = np.where(
@@ -368,15 +385,11 @@ def lieb_oxford_bd_check_Exc(
   return cond_satisfied, ranges
 
 
-def deriv_lower_bd_check(input, eps_c, r_s_dx, tol=1e-5):
+def deriv_lower_bd_check(input, f_c, r_s_dx, tol=1e-5):
   """
   0 <= d F_c / dr_s
   """
 
-  n = get_density(input[0])
-  eps_x_unif = get_eps_x_unif(n)
-
-  f_c = eps_c.reshape(input[0].shape) / eps_x_unif
   regions = np.diff(f_c, axis=0)
 
   regions = np.where(regions < -tol, True, False)
@@ -395,15 +408,11 @@ def deriv_lower_bd_check(input, eps_c, r_s_dx, tol=1e-5):
   return cond_satisfied, ranges
 
 
-def deriv_upper_bd_check_1(input, eps_c, r_s_dx, tol=1e-3):
+def deriv_upper_bd_check_1(input, f_c, r_s_dx, tol=1e-3):
   """ 
   d F_c / dr_s <= (F_c[r_s->\infty, ...] - F_c[r_s, ...]) / r_s 
   """
   r_s_mesh = input[0]
-  n = get_density(r_s_mesh)
-  eps_x_unif = get_eps_x_unif(n)
-
-  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
   f_c_inf = f_c[-1]
   f_c = f_c[:-1]
   r_s_mesh = r_s_mesh[:-1]
@@ -429,7 +438,7 @@ def deriv_upper_bd_check_1(input, eps_c, r_s_dx, tol=1e-3):
   return cond_satisfied, ranges
 
 
-def deriv_upper_bd_check_2(input, eps_c, r_s_dx, tol=1e-3):
+def deriv_upper_bd_check_2(input, f_c, r_s_dx, tol=1e-3):
   """ 
   d F_c / dr_s <= F_c / r_s .
   
@@ -437,10 +446,6 @@ def deriv_upper_bd_check_2(input, eps_c, r_s_dx, tol=1e-3):
   """
 
   r_s_mesh = input[0]
-  n = get_density(r_s_mesh)
-  eps_x_unif = get_eps_x_unif(n)
-
-  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
 
   regions_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
   up_bd_regions = np.where(
@@ -463,14 +468,10 @@ def deriv_upper_bd_check_2(input, eps_c, r_s_dx, tol=1e-3):
   return cond_satisfied, ranges
 
 
-def second_deriv_check(input, eps_c, r_s_dx, tol=1e-3):
+def second_deriv_check(input, f_c, r_s_dx, tol=1e-3):
   """ d^2 F_c / dr_s^2 >= (-2/r_s) d F_c / dr_s . """
 
   r_s_mesh = input[0]
-  n = get_density(r_s_mesh)
-  eps_x_unif = get_eps_x_unif(n)
-
-  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
 
   f_c_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
   f_c_2grad = np.diff(f_c, 2, axis=0) / (r_s_dx**2)
@@ -497,13 +498,8 @@ def second_deriv_check(input, eps_c, r_s_dx, tol=1e-3):
   return cond_satisfied, ranges
 
 
-def negativity_check(input, eps_c, r_s_dx, tol=1e-5):
+def negativity_check(input, f_c, r_s_dx, tol=1e-5):
   """ F_c >= 0 ."""
-
-  r_s_mesh = input[0]
-  n = get_density(r_s_mesh)
-  eps_x_unif = get_eps_x_unif(n)
-  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
 
   regions = np.where(
       f_c < -tol,
