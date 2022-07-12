@@ -221,58 +221,69 @@ def eps_to_enh_factor(input_mesh, eps_x_c):
   return eps_x_c / eps_x_unif
 
 
+def get_dfa_rung(func_id):
+  dfa_rungs = {
+      "lda_": lda_xc,
+      "mgga_": mgga_xc,
+      "gga_": gga_xc,
+      "hyb_gga_": gga_xc,
+      "hyb_mgga_": mgga_xc,
+  }
+
+  for dfa in dfa_rungs:
+    if dfa in func_id:
+      return dfa_rungs[dfa]
+
+  return NotImplementedError(f"functional {func_id} not supported.")
+
+
+def is_hybrid(func_id):
+  return 'hyb_' in func_id
+
+
 def get_enh_factor_x_c(func_id, input):
 
+  dfa = get_dfa_rung(func_id)
+
   # hyb_c_func workaround
-  if 'hyb_' in func_id and '_c_' in func_id:
+  if is_hybrid(func_id) and '_c_' in func_id:
     func_id = func_id.replace('_c_', '_xc_')
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
+    if func_xc._needs_laplacian:
+      dfa = mgga_xc_lapl
 
     input_mesh = np.meshgrid(*input, indexing='ij')
-    eps_xc = gga_xc(func_xc, *input_mesh)
+    eps_xc = dfa(func_xc, *input_mesh)
     f_xc = eps_to_enh_factor(input_mesh, eps_xc)
 
     # substract off exchange
     zero_r_s = np.array([0.00001])
     input_mesh = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
-    eps_x = gga_xc(func_xc, *input_mesh)
+    eps_x = dfa(func_xc, *input_mesh)
     f_x = eps_to_enh_factor(input_mesh, eps_x)
 
     f_c = f_xc - f_x
     return f_c
-  # hyb_c_func workaround
-  elif 'hyb_' in func_id and '_x_' in func_id:
+  elif is_hybrid(func_id) and '_x_' in func_id:
     func_id = func_id.replace('_x_', '_xc_')
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
+    if func_xc._needs_laplacian:
+      dfa = mgga_xc_lapl
 
     zero_r_s = np.array([0.00001])
     input_mesh = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
-    eps_x = gga_xc(func_xc, *input_mesh)
+    eps_x = dfa(func_xc, *input_mesh)
     f_x = eps_to_enh_factor(input_mesh, eps_x)
     return f_x
   else:
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
+    if func_xc._needs_laplacian:
+      dfa = mgga_xc_lapl
     input_mesh = np.meshgrid(*input, indexing='ij')
 
-  if 'mgga_' in func_id:
-    if func_xc._needs_laplacian:
-      eps_x_c = mgga_xc_lapl(func_xc, *input_mesh)
-      f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
-      return f_x_c
-    else:
-      eps_x_c = mgga_xc(func_xc, *input_mesh)
-      f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
-      return f_x_c
-  elif 'gga_' in func_id:
-    eps_x_c = gga_xc(func_xc, *input_mesh)
+    eps_x_c = dfa(func_xc, *input_mesh)
     f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
     return f_x_c
-  elif 'lda_' in func_id:
-    eps_x_c = lda_xc(func_xc, *input_mesh)
-    f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
-    return f_x_c
-
-  return NotImplementedError(f"functional {func_id} not supported.")
 
 
 def check_condition(
@@ -523,11 +534,12 @@ if __name__ == '__main__':
   r_s = np.linspace(0.0001, 2, 50)
   s = np.array([0, 1, 2])
   zeta = np.array([0])
+  alpha = np.array([0.5])
 
   # note that order must be in the form
   input = [r_s, s, zeta]
   cond_satisfied, ranges = check_condition(
-      "hyb_gga_c_pbeh",
+      "HYB_GGA_XC_PBEH",
       negativity_check,
       input,
   )
