@@ -212,7 +212,28 @@ def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
 
 def get_eps_xc(func_id, input):
 
-  func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
+  # hyb_c_func workaround
+  if 'hyb_' in func_id and '_c_' in func_id:
+    func_id = func_id.replace('_c_', '_xc_')
+    func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
+    input_xc = np.meshgrid(*input, indexing='ij')
+    eps_xc = gga_xc(func_xc, *input_xc).reshape(input_xc[0].shape)
+    n = get_density(input_xc[0])
+    eps_x_unif = get_eps_x_unif(n)
+
+    # substract off exchange
+    zero_r_s = np.array([0.00001])
+    input_xc = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
+    eps_x = gga_xc(func_xc, *input_xc).reshape(input_xc[0].shape)
+
+    n = get_density(input_xc[0])
+    zero_eps_x_unif = get_eps_x_unif(n)
+    eps_c = eps_xc - (eps_x / zero_eps_x_unif) * eps_x_unif
+
+    return eps_c.flatten()
+  else:
+    func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
+    input = np.meshgrid(*input, indexing='ij')
 
   if 'mgga_' in func_id:
     if func_xc._needs_laplacian:
@@ -240,7 +261,6 @@ def check_condition(
     input[0] = np.append(r_s, 100)
 
   r_s_dx = r_s[1] - r_s[0]
-  input = np.meshgrid(*input, indexing='ij')
   eps_c = get_eps_xc(func_id, input)
 
   if 'lieb_oxford_bd_check' in condition.__name__:
@@ -248,6 +268,7 @@ def check_condition(
     eps_x = get_eps_xc(func_id_x, input)
     eps_c = (eps_x, eps_c)
 
+  input = np.meshgrid(*input, indexing='ij')
   if tol:
     result = condition(input, eps_c, r_s_dx, tol)
   else:
@@ -480,10 +501,12 @@ def negativity_check(input, eps_c, r_s_dx, tol=1e-5):
   """ F_c >= 0 ."""
 
   r_s_mesh = input[0]
-  eps_c = eps_c.reshape(r_s_mesh.shape)
+  n = get_density(r_s_mesh)
+  eps_x_unif = get_eps_x_unif(n)
+  f_c = eps_c.reshape(r_s_mesh.shape) / eps_x_unif
 
   regions = np.where(
-      eps_c > tol,
+      f_c < -tol,
       True,
       False,
   )
@@ -501,15 +524,15 @@ def negativity_check(input, eps_c, r_s_dx, tol=1e-5):
 
 if __name__ == '__main__':
 
-  r_s = np.linspace(0.0001, 2, 1000)
-  s = np.linspace(0, 5, 50)
-  zeta = np.linspace(0, 1, 50)
+  r_s = np.linspace(0.0001, 2, 50)
+  s = np.array([0, 1, 2])
+  zeta = np.array([0])
 
   # note that order must be in the form
   input = [r_s, s, zeta]
   cond_satisfied, ranges = check_condition(
-      "gga_c_pbe",
-      deriv_upper_bd_check_1,
+      "hyb_gga_c_pbeh",
+      negativity_check,
       input,
   )
 
