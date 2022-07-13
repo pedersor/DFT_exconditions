@@ -1,6 +1,6 @@
 import pylibxc
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 
 # start defintions ====
 
@@ -345,11 +345,19 @@ def check_condition_low_memory(
     tol=None,
 ):
 
+  df = {
+      'xc': [func_id],
+      'satisfied': [],
+  }
+
+  range_labels = [key + '_range' for key in input]
+  for label in range_labels:
+    df[label] = []
+
   condition = condition_string_to_fun(condition_string)
 
   r_s = input['r_s']
   zeta = input['zeta']
-
   if len(input) == 3:
     # GGA
     s = input['s']
@@ -358,6 +366,7 @@ def check_condition_low_memory(
     # MGGA w/o laplacian
     s = input['s']
     alpha = input['alpha']
+    df['q_range'] = ['---']
     std_input = [r_s, s, zeta, alpha]
   elif len(input) == 5:
     # MGGA w/ laplacian
@@ -382,6 +391,19 @@ def check_condition_low_memory(
       cond_satisfied = False
       for i, r in enumerate(ranges):
         df[range_labels[i]].append(r)
+
+  if cond_satisfied:
+    for label in range_labels:
+      df[label] = ['---']
+  else:
+    for label in range_labels:
+      min_range = np.amin(df[label])
+      max_range = np.amax(df[label])
+      df[label] = [[min_range, max_range]]
+
+  df['satisfied'] = [cond_satisfied]
+  df = pd.DataFrame.from_dict(df)
+  return df
 
 
 def lieb_oxford_bd_check_Uxc(
@@ -594,6 +616,21 @@ def negativity_check(input, f_c, r_s_dx, tol=1e-5):
 
 if __name__ == '__main__':
 
+  input = {
+      'r_s': np.linspace(0.0001, 2, 50),
+      's': np.linspace(0, 5, 200),
+      'zeta': np.array([0]),
+      'alpha': np.array([0.5]),
+      'q': np.array([0.5])
+  }
+
+  cond_satisfied, percent_violated, ranges = check_condition_low_memory(
+      "MGGA_C_SCANL",
+      "negativity_check",
+      input,
+  )
+
+  sys.exit()
   r_s = np.linspace(0.0001, 2, 50)
   s = np.array([0, 1, 2])
   zeta = np.array([0])
