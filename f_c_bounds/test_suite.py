@@ -348,6 +348,7 @@ def check_condition(
   df = {
       'xc': [func_id],
       'satisfied': [],
+      'percent_violated': [],
   }
 
   range_labels = [key + '_range' for key in input]
@@ -375,18 +376,23 @@ def check_condition(
     q = input['q']
     std_input = [r_s, s, zeta, alpha, q]
 
-  s_splits = np.split(s, num_splits)
-
+  # total number of condition checks. Keep track of number of violations
+  num_checks = np.prod(np.array([var.shape for var in std_input]))
+  num_violated = 0
   cond_satisfied = True
+
+  s_splits = np.split(s, num_splits)
   for s_split in s_splits:
     std_input[1] = s_split
 
-    split_cond_satisfied, percent_violated, ranges = check_condition_work(
+    split_cond_satisfied, split_num_violated, ranges = check_condition_work(
         func_id,
         condition,
         std_input,
+        tol=tol,
     )
 
+    num_violated += split_num_violated
     if not split_cond_satisfied:
       cond_satisfied = False
       for i, r in enumerate(ranges):
@@ -402,6 +408,7 @@ def check_condition(
       df[label] = [[min_range, max_range]]
 
   df['satisfied'] = [cond_satisfied]
+  df['percent_violated'] = [num_violated / num_checks]
   df = pd.DataFrame.from_dict(df)
   return df
 
@@ -603,7 +610,7 @@ def negativity_check(input, f_c, r_s_dx, tol=1e-5):
   )
 
   cond_satisfied = not np.any(regions)
-  percent_violated = np.sum(regions) / regions.size
+  num_violated = np.sum(regions)
 
   if not cond_satisfied:
     ranges = ([np.amin(feature[regions]),
@@ -611,40 +618,25 @@ def negativity_check(input, f_c, r_s_dx, tol=1e-5):
   else:
     ranges = None
 
-  return cond_satisfied, percent_violated, ranges
+  return cond_satisfied, num_violated, ranges
 
 
 if __name__ == '__main__':
+  """ test check_condition. """
 
   input = {
-      'r_s': np.linspace(0.0001, 2, 50),
+      'r_s': np.linspace(0.0001, 2, 1000),
       's': np.linspace(0, 5, 200),
       'zeta': np.array([0]),
       'alpha': np.array([0.5]),
-      'q': np.array([0.5])
+      #'q': np.array([0.5])
   }
 
-  cond_satisfied, percent_violated, ranges = check_condition(
-      "MGGA_C_SCANL",
+  df = check_condition(
+      "hyb_mgga_c_tpssh",
       "negativity_check",
       input,
+      num_splits=1,
   )
 
-  sys.exit()
-  r_s = np.linspace(0.0001, 2, 50)
-  s = np.array([0, 1, 2])
-  zeta = np.array([0])
-  alpha = np.array([0.5])
-
-  # note that order must be in the form
-  input = [r_s, s, zeta]
-  cond_satisfied, percent_violated, ranges = check_condition_work(
-      "HYB_GGA_XC_pbeh",
-      negativity_check,
-      input,
-  )
-  print(f"Percent violated: {percent_violated}")
-  print(f"Condition satisified: {cond_satisfied}")
-  if ranges is not None:
-    for r in ranges:
-      print(r)
+  print(df)
