@@ -212,7 +212,7 @@ def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
 
 
 def eps_to_enh_factor(input_mesh, eps_x_c):
-  """ convert: \epsilon_(x)c to F_(x)c ."""
+  """ converts \epsilon_(x)c to F_(x)c ."""
 
   r_s_mesh = input_mesh[0]
   n = get_density(r_s_mesh)
@@ -402,7 +402,6 @@ def deriv_lower_bd_check(input, f_c, r_s_dx, tol=1e-5):
   """
 
   regions = np.diff(f_c, axis=0)
-
   regions = np.where(regions < -tol, True, False)
   regions = regions.flatten()
 
@@ -519,6 +518,7 @@ def negativity_check(input, f_c, r_s_dx, tol=1e-5):
   )
 
   cond_satisfied = not np.any(regions)
+  percent_violated = np.sum(regions) / regions.size
 
   if not cond_satisfied:
     ranges = ([np.amin(feature[regions]),
@@ -526,7 +526,7 @@ def negativity_check(input, f_c, r_s_dx, tol=1e-5):
   else:
     ranges = None
 
-  return cond_satisfied, ranges
+  return cond_satisfied, percent_violated, ranges
 
 
 if __name__ == '__main__':
@@ -538,12 +538,12 @@ if __name__ == '__main__':
 
   # note that order must be in the form
   input = [r_s, s, zeta]
-  cond_satisfied, ranges = check_condition(
-      "HYB_GGA_XC_PBEH",
+  cond_satisfied, percent_violated, ranges = check_condition(
+      "HYB_GGA_XC_pbeh",
       negativity_check,
       input,
   )
-
+  print(f"Percent violated: {percent_violated}")
   print(f"Condition satisified: {cond_satisfied}")
   if ranges is not None:
     for r in ranges:
