@@ -321,6 +321,69 @@ def check_condition(
   return result
 
 
+def condition_string_to_fun(condition_string):
+  """ get condition function from identifying string. """
+
+  conditions = {
+      "negativity_check": negativity_check,
+      "deriv_lower_bd_check": deriv_lower_bd_check,
+      "deriv_upper_bd_check_1": deriv_upper_bd_check_1,
+      "deriv_upper_bd_check_2": deriv_upper_bd_check_2,
+      "second_deriv_check": second_deriv_check,
+      "lieb_oxford_bd_check_Uxc": lieb_oxford_bd_check_Uxc,
+      "lieb_oxford_bd_check_Exc": lieb_oxford_bd_check_Exc,
+  }
+
+  return conditions[condition_string]
+
+
+def check_condition_low_memory(
+    func_id,
+    condition_string,
+    input,
+    num_splits=100,
+    tol=None,
+):
+
+  condition = condition_string_to_fun(condition_string)
+
+  r_s = input['r_s']
+  zeta = input['zeta']
+
+  if len(input) == 3:
+    # GGA
+    s = input['s']
+    std_input = [r_s, s, zeta]
+  elif len(input) == 4:
+    # MGGA w/o laplacian
+    s = input['s']
+    alpha = input['alpha']
+    std_input = [r_s, s, zeta, alpha]
+  elif len(input) == 5:
+    # MGGA w/ laplacian
+    s = input['s']
+    alpha = input['alpha']
+    q = input['q']
+    std_input = [r_s, s, zeta, alpha, q]
+
+  s_splits = np.split(s, num_splits)
+
+  cond_satisfied = True
+  for s_split in s_splits:
+    std_input[1] = s_split
+
+    split_cond_satisfied, percent_violated, ranges = check_condition(
+        func_id,
+        condition,
+        std_input,
+    )
+
+    if not split_cond_satisfied:
+      cond_satisfied = False
+      for i, r in enumerate(ranges):
+        df[range_labels[i]].append(r)
+
+
 def lieb_oxford_bd_check_Uxc(
     input,
     f_x_c,
