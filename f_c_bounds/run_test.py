@@ -1,153 +1,49 @@
 import sys
-from pathlib import Path
 
-import pandas as pd
 import numpy as np
 import pylibxc
 
 import test_suite
 
-xc = sys.argv[1]
+func_id = sys.argv[1]
+condition_string = sys.argv[2]
 
-conditions = {
-    "negativity_check": test_suite.negativity_check,
-    "deriv_lower_bd_check": test_suite.deriv_lower_bd_check,
-    "deriv_upper_bd_check_1": test_suite.deriv_upper_bd_check_1,
-    "deriv_upper_bd_check_2": test_suite.deriv_upper_bd_check_2,
-    "second_deriv_check": test_suite.second_deriv_check,
-    "lieb_oxford_bd_check_Uxc": test_suite.lieb_oxford_bd_check_Uxc,
-    "lieb_oxford_bd_check_Exc": test_suite.lieb_oxford_bd_check_Exc,
-}
-cond_to_check = conditions[sys.argv[2]]
+print(f"running: {func_id}", flush=True)
+print(f"checking condition: {condition_string}", flush=True)
 
-func_c = pylibxc.LibXCFunctional(xc, "polarized")
-print(f"running: {xc}", flush=True)
-print(f"checking condition: {cond_to_check.__name__}", flush=True)
+func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
-df = {
-    'xc': [xc],
-    'satisfied': [],
-    'r_s_range': [],
-    's_range': [],
-    'zeta_range': [],
-}
-
-range_labels = ['r_s_range', 's_range', 'zeta_range', 'alpha_range', 'q_range']
-
-if 'mgga_c_' in xc:
-
-  df['alpha_range'] = []
-  df['q_range'] = []
-
+if 'mgga_c_' in func_id:
   if func_c._needs_laplacian:
-
-    r_s = np.linspace(0.0001, 5, 3000)
-    s = np.linspace(0, 5, 100)
-    zeta = np.linspace(0, 1, 20)
-    alpha = np.linspace(0, 5, 10)
-    q = np.linspace(0, 5, 50)
-
-    # split up to reduce memory
-    s_splits = np.split(s, 100)
-    cond_satisfied = True
-    for s_split in s_splits:
-
-      input = [r_s, s_split, zeta, alpha, q]
-      split_cond_satisfied, ranges = test_suite.check_condition_work(
-          xc,
-          cond_to_check,
-          input,
-      )
-
-      del input
-
-      if not split_cond_satisfied:
-        cond_satisfied = False
-        for i, r in enumerate(ranges):
-          df[range_labels[i]].append(r)
-
-    if cond_satisfied:
-      for label in range_labels:
-        df[label] = ['---']
-    else:
-      for label in range_labels:
-        min_range = np.amin(df[label])
-        max_range = np.amax(df[label])
-        df[label] = [[min_range, max_range]]
-
+    input = {
+        'r_s': np.linspace(0.0001, 5, 3000),
+        's': np.linspace(0, 5, 100),
+        'zeta': np.linspace(0, 1, 20),
+        'alpha': np.linspace(0, 5, 10),
+        'q': np.linspace(0, 5, 50),
+    }
+    num_splits = 100
   else:
+    input = {
+        'r_s': np.linspace(0.0001, 5, 5000),
+        's': np.linspace(0, 5, 100),
+        'zeta': np.linspace(0, 1, 20),
+        'alpha': np.linspace(0, 5, 100),
+    }
+    num_splits = 50
+elif 'gga_c_' in func_id:
+  input = {
+      'r_s': np.linspace(0.0001, 5, 10000),
+      's': np.linspace(0, 5, 500),
+      'zeta': np.linspace(0, 1, 100),
+  }
+  num_splits = 100
 
-    r_s = np.linspace(0.0001, 5, 5000)
-    s = np.linspace(0, 5, 100)
-    zeta = np.linspace(0, 1, 20)
-    alpha = np.linspace(0, 5, 100)
+df = test_suite.check_condition(
+    func_id,
+    condition_string,
+    input,
+    num_splits=num_splits,
+)
 
-    # split up to reduce memory
-    s_splits = np.split(s, 50)
-    cond_satisfied = True
-    for s_split in s_splits:
-
-      input = [r_s, s_split, zeta, alpha]
-      split_cond_satisfied, ranges = test_suite.check_condition_work(
-          xc,
-          cond_to_check,
-          input,
-      )
-
-      del input
-
-      if not split_cond_satisfied:
-        cond_satisfied = False
-        for i, r in enumerate(ranges):
-          df[range_labels[i]].append(r)
-
-    if cond_satisfied:
-      for label in range_labels:
-        df[label] = ['---']
-    else:
-      for label in range_labels[:-1]:
-        min_range = np.amin(df[label])
-        max_range = np.amax(df[label])
-        df[label] = [[min_range, max_range]]
-
-      # no lapl.
-      df[range_labels[-1]] = ['---']
-
-elif 'gga_c_' in xc:
-
-  range_labels = range_labels[:3]
-
-  r_s = np.linspace(0.0001, 5, 10000)
-  s = np.linspace(0, 5, 500)
-  zeta = np.linspace(0, 1, 100)
-
-  s_splits = np.split(s, 100)
-
-  cond_satisfied = True
-  for s_split in s_splits:
-    input = [r_s, s_split, zeta]
-    split_cond_satisfied, ranges = test_suite.check_condition_work(
-        xc,
-        cond_to_check,
-        input,
-    )
-
-    del input
-
-    if not split_cond_satisfied:
-      cond_satisfied = False
-      for i, r in enumerate(ranges):
-        df[range_labels[i]].append(r)
-
-  if cond_satisfied:
-    for label in range_labels:
-      df[label] = ['---']
-  else:
-    for label in range_labels:
-      min_range = np.amin(df[label])
-      max_range = np.amax(df[label])
-      df[label] = [[min_range, max_range]]
-
-df['satisfied'] = [cond_satisfied]
-df = pd.DataFrame.from_dict(df)
-df.to_csv(f'{xc}.csv', header=False, index=False)
+df.to_csv(f'{func_id}.csv', header=False, index=False)
