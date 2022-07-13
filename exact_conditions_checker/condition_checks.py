@@ -226,8 +226,8 @@ def get_dfa_rung(func_id):
       "lda_": lda_xc,
       "mgga_": mgga_xc,
       "gga_": gga_xc,
-      "hyb_gga_": gga_xc,
       "hyb_mgga_": mgga_xc,
+      "hyb_gga_": gga_xc,
   }
 
   for dfa in dfa_rungs:
@@ -293,7 +293,6 @@ def check_condition_work(
     tol=None,
 ):
 
-  func_id = func_id.lower().replace('_xc_', '_c_')
   r_s = input[0]
   r_s_dx = r_s[1] - r_s[0]
 
@@ -344,6 +343,8 @@ def check_condition(
     num_splits=100,
     tol=None,
 ):
+
+  func_id = func_id.lower().replace('_xc_', '_c_')
 
   df = {
       'xc': [func_id],
@@ -431,24 +432,23 @@ def lieb_oxford_bd_check_Uxc(
   f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
   f_xc = f_c + f_x
 
-  up_bd_regions = np.where(
+  regions = np.where(
       (r_s_mesh * f_c_deriv) + f_xc > lieb_oxford_bd_const + tol,
       True,
       False,
   )
 
   # finite differences at end points may be inaccurate
-  cond_satisfied = not np.any(up_bd_regions[3:-3])
+  cond_satisfied = not np.any(regions[3:-3])
+  num_violated = np.sum(regions[3:-3])
 
   if not cond_satisfied:
-    ranges = ([
-        np.amin(feature[up_bd_regions]),
-        np.amax(feature[up_bd_regions])
-    ] for feature in input)
+    ranges = ([np.amin(feature[regions]),
+               np.amax(feature[regions])] for feature in input)
   else:
     ranges = None
 
-  return cond_satisfied, ranges
+  return cond_satisfied, num_violated, ranges
 
 
 def lieb_oxford_bd_check_Exc(
@@ -468,24 +468,23 @@ def lieb_oxford_bd_check_Exc(
   f_x, f_c = f_x_c
   f_xc = f_c + f_x
 
-  up_bd_regions = np.where(
+  regions = np.where(
       f_xc > lieb_oxford_bd_const + tol,
       True,
       False,
   )
 
   # finite differences at end points may be inaccurate
-  cond_satisfied = not np.any(up_bd_regions[3:-3])
+  cond_satisfied = not np.any(regions[3:-3])
+  num_violated = np.sum(regions[3:-3])
 
   if not cond_satisfied:
-    ranges = ([
-        np.amin(feature[up_bd_regions]),
-        np.amax(feature[up_bd_regions])
-    ] for feature in input)
+    ranges = ([np.amin(feature[regions]),
+               np.amax(feature[regions])] for feature in input)
   else:
     ranges = None
 
-  return cond_satisfied, ranges
+  return cond_satisfied, num_violated, ranges
 
 
 def deriv_lower_bd_check(input, f_c, r_s_dx, tol=1e-5):
@@ -498,6 +497,7 @@ def deriv_lower_bd_check(input, f_c, r_s_dx, tol=1e-5):
   regions = regions.flatten()
 
   cond_satisfied = not np.any(regions)
+  num_violated = np.sum(regions)
 
   if not cond_satisfied:
     # remove first entry
@@ -507,7 +507,7 @@ def deriv_lower_bd_check(input, f_c, r_s_dx, tol=1e-5):
   else:
     ranges = None
 
-  return cond_satisfied, ranges
+  return cond_satisfied, num_violated, ranges
 
 
 def deriv_upper_bd_check_1(input, f_c, r_s_dx, tol=1e-3):
@@ -520,24 +520,23 @@ def deriv_upper_bd_check_1(input, f_c, r_s_dx, tol=1e-3):
   r_s_mesh = r_s_mesh[:-1]
 
   f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
-  up_bd_regions = np.where(
+  regions = np.where(
       (r_s_mesh * f_c_deriv) - (f_c_inf - f_c) > tol,
       True,
       False,
   )
 
   # finite differences at end points may be inaccurate
-  cond_satisfied = not np.any(up_bd_regions[3:-3])
+  cond_satisfied = not np.any(regions[3:-3])
+  num_violated = np.sum(regions[3:-3])
 
   if not cond_satisfied:
-    ranges = ([
-        np.amin(feature[:-1][up_bd_regions]),
-        np.amax(feature[:-1][up_bd_regions])
-    ] for feature in input)
+    ranges = ([np.amin(feature[:-1][regions]),
+               np.amax(feature[:-1][regions])] for feature in input)
   else:
     ranges = None
 
-  return cond_satisfied, ranges
+  return cond_satisfied, num_violated, ranges
 
 
 def deriv_upper_bd_check_2(input, f_c, r_s_dx, tol=1e-3):
@@ -550,24 +549,23 @@ def deriv_upper_bd_check_2(input, f_c, r_s_dx, tol=1e-3):
   r_s_mesh = input[0]
 
   regions_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
-  up_bd_regions = np.where(
+  regions = np.where(
       (r_s_mesh * regions_grad) - f_c > tol,
       True,
       False,
   )
 
   # finite differences at end points may be inaccurate
-  cond_satisfied = not np.any(up_bd_regions[3:-3])
+  cond_satisfied = not np.any(regions[3:-3])
+  num_violated = np.sum(regions[3:-3])
 
   if not cond_satisfied:
-    ranges = ([
-        np.amin(feature[up_bd_regions]),
-        np.amax(feature[up_bd_regions])
-    ] for feature in input)
+    ranges = ([np.amin(feature[regions]),
+               np.amax(feature[regions])] for feature in input)
   else:
     ranges = None
 
-  return cond_satisfied, ranges
+  return cond_satisfied, num_violated, ranges
 
 
 def second_deriv_check(input, f_c, r_s_dx, tol=1e-3):
@@ -580,24 +578,25 @@ def second_deriv_check(input, f_c, r_s_dx, tol=1e-3):
 
   r_s_mesh = r_s_mesh[1:-1]
   f_c_grad = f_c_grad[1:-1]
-  up_bd_regions = np.where(
+  regions = np.where(
       (r_s_mesh * f_c_2grad) + (2 * f_c_grad) < -tol,
       True,
       False,
   )
 
   # finite differences at end points may be inaccurate
-  cond_satisfied = not np.any(up_bd_regions[3:-3])
+  cond_satisfied = not np.any(regions[3:-3])
+  num_violated = np.sum(regions[3:-3])
 
   if not cond_satisfied:
     ranges = ([
-        np.amin(feature[1:-1][up_bd_regions]),
-        np.amax(feature[1:-1][up_bd_regions])
+        np.amin(feature[1:-1][regions]),
+        np.amax(feature[1:-1][regions])
     ] for feature in input)
   else:
     ranges = None
 
-  return cond_satisfied, ranges
+  return cond_satisfied, num_violated, ranges
 
 
 def negativity_check(input, f_c, r_s_dx, tol=1e-5):

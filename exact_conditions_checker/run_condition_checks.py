@@ -13,7 +13,7 @@ print(f"checking condition: {condition_string}", flush=True)
 
 func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 
-if 'mgga_c_' in func_id:
+if 'mgga_c_' in func_id or 'mgga_xc_' in func_id:
   if func_c._needs_laplacian:
     input = {
         'r_s': np.linspace(0.0001, 5, 3000),
@@ -31,7 +31,7 @@ if 'mgga_c_' in func_id:
         'alpha': np.linspace(0, 5, 100),
     }
     num_splits = 50
-elif 'gga_c_' in func_id:
+elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
   input = {
       'r_s': np.linspace(0.0001, 5, 10000),
       's': np.linspace(0, 5, 500),
