@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pylibxc
 
-import test_suite
+import condition_checks
 
 func_id = sys.argv[1]
 condition_string = sys.argv[2]
@@ -39,7 +39,7 @@ elif 'gga_c_' in func_id:
   }
   num_splits = 100
 
-df = test_suite.check_condition(
+df = condition_checks.check_condition(
     func_id,
     condition_string,
     input,

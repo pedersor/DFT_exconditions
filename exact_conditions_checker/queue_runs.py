@@ -19,7 +19,7 @@ for func_type in func_types:
     if func_type in xc_func and func_type[0] == xc_func[
         0] and '_1d_' not in xc_func and '_2d_' not in xc_func:
 
-      run_file = '../run_test.py'
+      run_file = '../run_condition_checks.py'
       job_file = f'{xc_func}.job'
       with open(out_dir / job_file, "w") as fh:
         # slurm commands
