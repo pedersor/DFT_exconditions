@@ -286,7 +286,7 @@ def get_enh_factor_x_c(func_id, input):
     return f_x_c
 
 
-def check_condition(
+def check_condition_work(
     func_id,
     condition,
     input,
@@ -337,7 +337,7 @@ def condition_string_to_fun(condition_string):
   return conditions[condition_string]
 
 
-def check_condition_low_memory(
+def check_condition(
     func_id,
     condition_string,
     input,
@@ -381,7 +381,7 @@ def check_condition_low_memory(
   for s_split in s_splits:
     std_input[1] = s_split
 
-    split_cond_satisfied, percent_violated, ranges = check_condition(
+    split_cond_satisfied, percent_violated, ranges = check_condition_work(
         func_id,
         condition,
         std_input,
@@ -624,7 +624,7 @@ if __name__ == '__main__':
       'q': np.array([0.5])
   }
 
-  cond_satisfied, percent_violated, ranges = check_condition_low_memory(
+  cond_satisfied, percent_violated, ranges = check_condition(
       "MGGA_C_SCANL",
       "negativity_check",
       input,
@@ -638,7 +638,7 @@ if __name__ == '__main__':
 
   # note that order must be in the form
   input = [r_s, s, zeta]
-  cond_satisfied, percent_violated, ranges = check_condition(
+  cond_satisfied, percent_violated, ranges = check_condition_work(
       "HYB_GGA_XC_pbeh",
       negativity_check,
       input,

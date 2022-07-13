@@ -53,7 +53,7 @@ if 'mgga_c_' in xc:
     for s_split in s_splits:
 
       input = [r_s, s_split, zeta, alpha, q]
-      split_cond_satisfied, ranges = test_suite.check_condition(
+      split_cond_satisfied, ranges = test_suite.check_condition_work(
           xc,
           cond_to_check,
           input,
@@ -88,7 +88,7 @@ if 'mgga_c_' in xc:
     for s_split in s_splits:
 
       input = [r_s, s_split, zeta, alpha]
-      split_cond_satisfied, ranges = test_suite.check_condition(
+      split_cond_satisfied, ranges = test_suite.check_condition_work(
           xc,
           cond_to_check,
           input,
@@ -126,7 +126,7 @@ elif 'gga_c_' in xc:
   cond_satisfied = True
   for s_split in s_splits:
     input = [r_s, s_split, zeta]
-    split_cond_satisfied, ranges = test_suite.check_condition(
+    split_cond_satisfied, ranges = test_suite.check_condition_work(
         xc,
         cond_to_check,
         input,
