@@ -1,6 +1,7 @@
-import pylibxc
 import numpy as np
 import pandas as pd
+
+import pylibxc
 
 # start defintions ====
 
@@ -296,10 +297,6 @@ def check_condition_work(
   r_s = input[0]
   r_s_dx = r_s[1] - r_s[0]
 
-  if condition.__name__ == 'deriv_upper_bd_check_1':
-    # add r_s = 100 (to approximate r_s -> \infty)
-    input[0] = np.append(r_s, 100)
-
   if 'lieb_oxford_bd_check' in condition.__name__:
     f_c = get_enh_factor_x_c(func_id, input)
 
@@ -360,6 +357,11 @@ def check_condition(
 
   r_s = input['r_s']
   zeta = input['zeta']
+
+  if condition_string == 'deriv_upper_bd_check_1':
+    # add r_s = 100 (to approximate r_s -> \infty)
+    r_s = np.append(r_s, 100)
+
   if len(input) == 3:
     # GGA
     s = input['s']
@@ -633,7 +635,7 @@ if __name__ == '__main__':
 
   df = check_condition(
       "hyb_mgga_c_tpssh",
-      "negativity_check",
+      "deriv_upper_bd_check_1",
       input,
       num_splits=1,
   )
