@@ -626,16 +626,16 @@ if __name__ == '__main__':
   """ test check_condition. """
 
   input = {
-      'r_s': np.linspace(0.0001, 2, 1000),
-      's': np.linspace(0, 5, 200),
+      'r_s': np.linspace(0.01, 5, 1000),
+      's': np.linspace(0.1, 3, 200),
       'zeta': np.array([0]),
-      'alpha': np.array([0.5]),
+      #'alpha': np.array([0.5]),
       #'q': np.array([0.5])
   }
 
   df = check_condition(
-      "hyb_mgga_c_tpssh",
-      "deriv_upper_bd_check_1",
+      "hyb_gga_c_b3lyp",
+      "negativity_check",
       input,
       num_splits=1,
   )
