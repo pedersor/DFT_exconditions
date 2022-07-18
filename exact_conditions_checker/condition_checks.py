@@ -541,7 +541,7 @@ def deriv_upper_bd_check_1(input, f_c, r_s_dx, tol=1e-3):
   return cond_satisfied, num_violated, ranges
 
 
-def deriv_upper_bd_check_2(input, f_c, r_s_dx, tol=1e-3):
+def deriv_upper_bd_check_2(input, f_c, r_s_dx, tol=5e-4):
   """ 
   d F_c / dr_s <= F_c / r_s .
   
