@@ -3,3 +3,4 @@ tmp*
 *slurm*
 *.job
 *_c_*.csv
+*_xc_*.csv
