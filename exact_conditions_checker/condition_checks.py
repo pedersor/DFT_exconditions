@@ -238,16 +238,16 @@ def get_dfa_rung(func_id):
   return NotImplementedError(f"functional {func_id} not supported.")
 
 
-def is_hybrid(func_id):
-  return 'hyb_' in func_id
+def is_xc_func(func_id):
+  return '_xc_' in func_id
 
 
-def get_enh_factor_x_c(func_id, input):
+def get_enh_factor_x_c(func_id, input, zero_r_s=1e-5, xc_func=False):
 
   dfa = get_dfa_rung(func_id)
 
   # hyb_c_func workaround
-  if is_hybrid(func_id) and '_c_' in func_id:
+  if xc_func and '_c_' in func_id:
     func_id = func_id.replace('_c_', '_xc_')
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
     if func_xc._needs_laplacian:
@@ -258,20 +258,21 @@ def get_enh_factor_x_c(func_id, input):
     f_xc = eps_to_enh_factor(input_mesh, eps_xc)
 
     # substract off exchange
-    zero_r_s = np.array([0.00001])
+    zero_r_s = np.array([zero_r_s])
     input_mesh = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
     eps_x = dfa(func_xc, *input_mesh)
     f_x = eps_to_enh_factor(input_mesh, eps_x)
 
     f_c = f_xc - f_x
     return f_c
-  elif is_hybrid(func_id) and '_x_' in func_id:
+  elif xc_func and '_x_' in func_id:
     func_id = func_id.replace('_x_', '_xc_')
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
     if func_xc._needs_laplacian:
       dfa = mgga_xc_lapl
 
-    zero_r_s = np.array([0.00001])
+    # substract off exchange
+    zero_r_s = np.array([zero_r_s])
     input_mesh = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
     eps_x = dfa(func_xc, *input_mesh)
     f_x = eps_to_enh_factor(input_mesh, eps_x)
@@ -296,16 +297,26 @@ def check_condition_work(
 
   r_s = input[0]
   r_s_dx = r_s[1] - r_s[0]
+  xc_func = is_xc_func(func_id)
+  if xc_func:
+    func_id_c = func_id.replace('_xc_', '_c_')
+  else:
+    func_id_c = func_id
 
   if 'lieb_oxford_bd_check' in condition.__name__:
-    f_c = get_enh_factor_x_c(func_id, input)
+    f_c = get_enh_factor_x_c(func_id_c, input, xc_func=xc_func)
 
     # get exchange
-    func_id_x = func_id.replace('_c_', '_x_')
-    f_x = get_enh_factor_x_c(func_id_x, input)
+    try:
+      func_id_x = func_id_c.replace('_c_', '_x_')
+      f_x = get_enh_factor_x_c(func_id_x, input, xc_func=xc_func)
+    except:
+      func_id_x = 'hyb_' + func_id_c.replace('_c_', '_x_')
+      f_x = get_enh_factor_x_c(func_id_x, input, xc_func=xc_func)
+
     f_x_c = (f_x, f_c)
   else:
-    f_x_c = get_enh_factor_x_c(func_id, input)
+    f_x_c = get_enh_factor_x_c(func_id_c, input, xc_func=xc_func)
 
   input_mesh = np.meshgrid(*input, indexing='ij')
   if tol:
@@ -341,7 +352,7 @@ def check_condition(
     tol=None,
 ):
 
-  func_id = func_id.lower().replace('_xc_', '_c_')
+  func_id = func_id.lower()
 
   df = {
       'xc': [func_id],
@@ -629,13 +640,13 @@ if __name__ == '__main__':
       'r_s': np.linspace(0.01, 5, 1000),
       's': np.linspace(0.1, 3, 200),
       'zeta': np.array([0]),
-      #'alpha': np.array([0.5]),
+      'alpha': np.array([0.5]),
       #'q': np.array([0.5])
   }
 
   df = check_condition(
-      "hyb_gga_c_b3lyp",
-      "negativity_check",
+      "MGGA_C_m06",
+      "lieb_oxford_bd_check_Exc",
       input,
       num_splits=1,
   )
