@@ -244,6 +244,7 @@ def is_xc_func(func_id):
 
 def get_enh_factor_x_c(func_id, input, lam=5000, xc_func=False):
 
+  input_mesh = np.meshgrid(*input, indexing='ij')
   dfa = get_dfa_rung(func_id)
 
   # hyb_c_func workaround
@@ -253,7 +254,6 @@ def get_enh_factor_x_c(func_id, input, lam=5000, xc_func=False):
     if func_xc._needs_laplacian:
       dfa = mgga_xc_lapl
 
-    input_mesh = np.meshgrid(*input, indexing='ij')
     eps_xc = dfa(func_xc, *input_mesh)
     f_xc = eps_to_enh_factor(input_mesh, eps_xc)
 
@@ -278,13 +278,11 @@ def get_enh_factor_x_c(func_id, input, lam=5000, xc_func=False):
     scaled_input_mesh = np.meshgrid(scaled_r_s, *input[1:], indexing='ij')
     eps_x = dfa(func_xc, *scaled_input_mesh) / lam
     f_x = eps_to_enh_factor(input_mesh, eps_x)
-
     return f_x
   else:
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
     if func_xc._needs_laplacian:
       dfa = mgga_xc_lapl
-    input_mesh = np.meshgrid(*input, indexing='ij')
 
     eps_x_c = dfa(func_xc, *input_mesh)
     f_x_c = eps_to_enh_factor(input_mesh, eps_x_c)
