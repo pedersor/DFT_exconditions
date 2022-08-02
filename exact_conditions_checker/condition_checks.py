@@ -242,7 +242,7 @@ def is_xc_func(func_id):
   return '_xc_' in func_id
 
 
-def get_enh_factor_x_c(func_id, input, zero_r_s=1e-5, xc_func=False):
+def get_enh_factor_x_c(func_id, input, lam=5000, xc_func=False):
 
   dfa = get_dfa_rung(func_id)
 
@@ -257,10 +257,11 @@ def get_enh_factor_x_c(func_id, input, zero_r_s=1e-5, xc_func=False):
     eps_xc = dfa(func_xc, *input_mesh)
     f_xc = eps_to_enh_factor(input_mesh, eps_xc)
 
-    # substract off exchange
-    zero_r_s = np.array([zero_r_s])
-    input_mesh = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
-    eps_x = dfa(func_xc, *input_mesh)
+    # obtain and substract off exchange.
+    # scale: r_s/lambda.
+    scaled_r_s = input[0] / lam
+    scaled_input_mesh = np.meshgrid(scaled_r_s, *input[1:], indexing='ij')
+    eps_x = dfa(func_xc, *scaled_input_mesh) / lam
     f_x = eps_to_enh_factor(input_mesh, eps_x)
 
     f_c = f_xc - f_x
@@ -271,11 +272,13 @@ def get_enh_factor_x_c(func_id, input, zero_r_s=1e-5, xc_func=False):
     if func_xc._needs_laplacian:
       dfa = mgga_xc_lapl
 
-    # substract off exchange
-    zero_r_s = np.array([zero_r_s])
-    input_mesh = np.meshgrid(zero_r_s, *input[1:], indexing='ij')
-    eps_x = dfa(func_xc, *input_mesh)
+    # obtain and substract off exchange.
+    # scale: r_s/lambda.
+    scaled_r_s = input[0] / lam
+    scaled_input_mesh = np.meshgrid(scaled_r_s, *input[1:], indexing='ij')
+    eps_x = dfa(func_xc, *scaled_input_mesh) / lam
     f_x = eps_to_enh_factor(input_mesh, eps_x)
+
     return f_x
   else:
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
@@ -373,7 +376,11 @@ def check_condition(
     # add r_s = 100 (to approximate r_s -> \infty)
     r_s = np.append(r_s, 100)
 
-  if len(input) == 3:
+  if len(input) == 2:
+    # LDA
+    std_input = [r_s, zeta]
+    s = None
+  elif len(input) == 3:
     # GGA
     s = input['s']
     std_input = [r_s, s, zeta]
@@ -395,9 +402,14 @@ def check_condition(
   num_violated = 0
   cond_satisfied = True
 
-  s_splits = np.split(s, num_splits)
+  if s is None:
+    s_splits = [None]
+  else:
+    s_splits = np.split(s, num_splits)
+
   for s_split in s_splits:
-    std_input[1] = s_split
+    if s_split is not None:
+      std_input[1] = s_split
 
     split_cond_satisfied, split_num_violated, ranges = check_condition_work(
         func_id,
@@ -640,13 +652,13 @@ if __name__ == '__main__':
       'r_s': np.linspace(0.01, 5, 1000),
       's': np.linspace(0.1, 3, 200),
       'zeta': np.array([0]),
-      'alpha': np.array([0.5]),
+      #'alpha': np.array([0.5]),
       #'q': np.array([0.5])
   }
 
   df = check_condition(
-      "MGGA_C_m06",
-      "lieb_oxford_bd_check_Exc",
+      "hyb_gga_xc_b97",
+      "negativity_check",
       input,
       num_splits=1,
   )
