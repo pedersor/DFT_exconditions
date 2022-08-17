@@ -9,19 +9,25 @@ from pyscf.dft import numint
 import utils
 
 
-def e_c_check(mol, base_mf, mf, gams, xc='pbe', xctype='GGA'):
+def e_c_check(mol, mf, gams, xc='pbe', xctype='GGA'):
 
   dm = mf.make_rdm1()
+
+  # dummy calculation to get grids and weights
+  base_mf = dft.RKS(mol)
+  base_mf.xc = f',{xc}'
+  base_mf.max_cycle = 0
+  base_mf.kernel()
 
   coords = base_mf.grids.coords
   weights = base_mf.grids.weights
 
-  e_c_gam = []
-  numint_check = []
+  eps_c_gam = []
+  nelec_check = []
   for gam in gams:
 
     # Use default mesh grids and weights
-    scaled_coords = gam * coords
+    scaled_coords = coords
     ao_value = numint.eval_ao(mol, scaled_coords, deriv=2)
     # The first row of rho is electron density, the rest three rows are electron
     # density gradients which are needed for GGA functional
@@ -32,63 +38,43 @@ def e_c_check(mol, base_mf, mf, gams, xc='pbe', xctype='GGA'):
     if rho.shape[0] > 4:
       rho[4:] = (gam**5) * rho[4:]
 
-    e_c = dft.libxc.eval_xc(f',{xc}', rho)[0]
+    eps_c = dft.libxc.eval_xc(f',{xc}', rho)[0]
 
-    numint_check.append(np.einsum('i,i->', rho[0], weights))
-    e_c_gam.append(np.einsum('i,i,i->', e_c, rho[0], weights))
+    nelec_check.append(np.einsum('i,i->', rho[0], weights / gam**3))
+    eps_c_gam.append(np.einsum('i,i,i->', eps_c, rho[0], weights / gam**3))
 
-  # TODO: check numint against nelec
-  print('min numint: ', min(numint_check))
+  # check whether integral over density yields correct nelec
+  print('min nelec: ', min(nelec_check))
 
-  return e_c_gam
+  return eps_c_gam
 
 
-def plot_E_c_gamma():
-  title = 'h2'
-  gams = np.linspace(0.2, 2, num=20)
+def plot_E_c_gamma(mol, title, gams=np.linspace(0.01, 2, num=40)):
 
-  # CCSD(T) calculation
-  mol = gto.M(
-      atom='H 0 0 0;H 0 0 0.74',  # in Angstrom
-      basis='ccpv5z',
-      symmetry=True)
+  # HF density calculation
   mf = scf.HF(mol).run()
-  ccsd_mf = cc.CCSD(mf).run()
-  et = ccsd_mf.ccsd_t()
-  ccsd_t_en = ccsd_mf.e_tot + et
-  e_c = ccsd_t_en - mf.e_tot
-
-  # dummy calculation to get larger range of grids and weights
-  tmp_mol = gto.M(atom='Be 0 0 0;Be 0 0 0.74', basis='ccpv5z')
-  base_mf = dft.RKS(tmp_mol)
-  base_mf.xc = 'lda,vwn'
-  base_mf.max_cycle = 1
-  base_mf.kernel()
 
   xcs = [
       ('pbe', 'GGA'),
-      ('P86', 'GGA'),
       ('lyp', 'GGA'),
       ('scan', 'MGGA'),
-      ('m05', 'MGGA'),
-      ('m11', 'MGGA'),
-      ('mn15', 'MGGA'),
+      ('m06', 'MGGA'),
   ]
   for xc, xctype in xcs:
-    e_c_gam = e_c_check(mol, base_mf, mf, gams, xc=xc, xctype=xctype)
+    e_c_gam = e_c_check(mol, mf, gams, xc=xc, xctype=xctype)
     plt.plot(gams, e_c_gam, label=xc)
 
-  plt.plot(gams, e_c * gams, color='black', label=r'$gamma E^*_c$')
   plt.axvline(x=1, alpha=0.4, color='k', linestyle='--')
 
   plt.legend()
   plt.title(title)
   plt.xlabel(r'$\gamma$')
+  plt.ylabel(r'$E_c[n^{HF}_{\gamma}]$')
   plt.xlim(left=0)
   plt.ylim(top=0)
   plt.grid(alpha=0.2)
-  title = title.replace(' ', '_')
-  plt.savefig(f'{title}.pdf', bbox_inches='tight')
+  file_name = title.replace('$', '').replace('_', '')
+  plt.savefig(f'{file_name}.pdf', bbox_inches='tight')
 
 
 def plot_E_c_deriv_gamma():
@@ -149,4 +135,11 @@ def plot_E_c_deriv_gamma():
 if __name__ == '__main__':
   import matplotlib.pyplot as plt
 
-  plot_E_c_deriv_gamma()
+  title = 'H$_2$'
+  mol = gto.M(
+      atom='H 0 0 0;H 0 0 0.74',  # in Angstrom
+      basis='ccpv5z',
+  )
+
+  utils.use_standard_plotting_params()
+  plot_E_c_gamma(mol, title)

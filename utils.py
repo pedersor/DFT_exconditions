@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def get_density(r_s):
@@ -20,3 +21,15 @@ def get_s(n, n_grad):
 def get_grad_n(s, n):
   """ Obtain |\nabla n| from the reduced gradient s. """
   return s * (2 * ((3 * np.pi**2)**(1 / 3)) * (n**(4 / 3)))
+
+
+def use_standard_plotting_params():
+  plt.rcParams["axes.titlesize"] = 24
+  plt.rcParams["axes.labelsize"] = 20
+  plt.rcParams["lines.linewidth"] = 3
+  plt.rcParams["lines.markersize"] = 8
+  plt.rcParams["xtick.labelsize"] = 16
+  plt.rcParams["ytick.labelsize"] = 16
+  plt.rcParams["font.size"] = 24
+  plt.rcParams["legend.fontsize"] = 16
+  plt.rcParams["figure.figsize"] = (6, 6)
