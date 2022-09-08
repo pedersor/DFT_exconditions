@@ -37,6 +37,7 @@ class PyscfEvaluator():
         mf = dft.UKS(mol)
       mf.xc = self.xc
       mf.kernel()
+      return mf
 
     elif self.calc == "hf":
       # HF calculation

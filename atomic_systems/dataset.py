@@ -131,7 +131,7 @@ if __name__ == '__main__':
     return 27.2114 * ha_en
 
   dset = Dataset('ie_atoms.yaml')
-  evl = PyscfEvaluator('hf')
+  evl = PyscfEvaluator('lda,vwn')
 
   df = {}
   for i in range(len(dset)):
