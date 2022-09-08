@@ -53,6 +53,23 @@ class System(dict):
     self._caches[s] = obj
 
 
+class Dataset():
+
+  def __init__(self, fpath):
+    with open(fpath, "r") as f:
+      self.obj = [Entry.create(a) for a in yaml.safe_load(f)]
+
+  def __len__(self) -> int:
+    return len(self.obj)
+
+  def __getitem__(self, i: int) -> Entry:
+    return self.obj[i]
+
+  def get_indices(self, filtfcn: Callable[[Dict], bool]) -> List[int]:
+    # return the id of the datasets that passes the filter function
+    return [i for (i, obj) in enumerate(self.obj) if filtfcn(obj)]
+
+
 class Entry(dict):
   """
   Interface to the entry of the dataset.
@@ -91,23 +108,6 @@ class Entry(dict):
     return self._systems
 
 
-class Dataset():
-
-  def __init__(self, fpath):
-    with open(fpath, "r") as f:
-      self.obj = [Entry.create(a) for a in yaml.safe_load(f)]
-
-  def __len__(self) -> int:
-    return len(self.obj)
-
-  def __getitem__(self, i: int) -> Entry:
-    return self.obj[i]
-
-  def get_indices(self, filtfcn: Callable[[Dict], bool]) -> List[int]:
-    # return the id of the datasets that passes the filter function
-    return [i for (i, obj) in enumerate(self.obj) if filtfcn(obj)]
-
-
 class EntryIE(Entry):
   """Entry for Ionization Energy (IE)"""
 
@@ -119,6 +119,9 @@ class EntryIE(Entry):
     tot_energies = np.array([mf.e_tot for mf in mfs])
     ie = np.dot(np.array(self["dotvec"]), tot_energies)
     return ie
+
+  def get_true_val(self):
+    return self["true_val"]
 
 
 if __name__ == '__main__':
@@ -135,7 +138,7 @@ if __name__ == '__main__':
     curr_calc = dset[i]
     label = curr_calc["name"].split(' ')[-1]
 
-    val = evl.evaluate(dset[i])
-    df[label] = ha_to_ev(val)
+    error = evl.get_error(dset[i])
+    df[label] = error
 
   print(df)

@@ -52,3 +52,7 @@ class PyscfEvaluator():
     mfs = [self.run(system) for system in entry.get_systems()]
     val = entry.get_val(mfs)
     return val
+
+  def get_error(self, entry: Union[Entry, Dict]):
+    val = self.evaluate(entry)
+    return val - entry.get_true_val()
