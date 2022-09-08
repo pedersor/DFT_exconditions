@@ -4,6 +4,10 @@ from typing import List, Dict, Callable, Optional
 
 import numpy as np
 from pyscf import gto, cc, scf
+import pandas as pd
+
+HAR_TO_EV = 27.2114
+HAR_TO_KCAL = 627.5
 
 
 class System(dict):
@@ -127,18 +131,19 @@ class EntryIE(Entry):
 if __name__ == '__main__':
   from evaluator import PyscfEvaluator
 
-  def ha_to_ev(ha_en):
-    return 27.2114 * ha_en
-
   dset = Dataset('ie_atoms.yaml')
-  evl = PyscfEvaluator('lda,vwn')
+  evl = PyscfEvaluator('M06')
 
-  df = {}
+  df = {'label': [], 'error': []}
   for i in range(len(dset)):
     curr_calc = dset[i]
     label = curr_calc["name"].split(' ')[-1]
 
-    error = evl.get_error(dset[i])
-    df[label] = error
+    error = evl.get_error(curr_calc)
 
-  print(df)
+    df['label'].append(label)
+    df['error'].append(error)
+
+  df = pd.DataFrame.from_dict(df)
+  mae = np.mean(np.abs(df['error'].to_numpy())) * HAR_TO_KCAL
+  print('MAE = ', mae)
