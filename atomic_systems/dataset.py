@@ -131,8 +131,9 @@ class EntryIE(Entry):
 if __name__ == '__main__':
   from evaluator import PyscfEvaluator
 
+  xc = 'M06'
   dset = Dataset('ie_atoms.yaml')
-  evl = PyscfEvaluator('M06')
+  evl = PyscfEvaluator(xc)
 
   df = {'label': [], 'error': []}
   for i in range(len(dset)):
@@ -147,3 +148,4 @@ if __name__ == '__main__':
   df = pd.DataFrame.from_dict(df)
   mae = np.mean(np.abs(df['error'].to_numpy())) * HAR_TO_KCAL
   print('MAE = ', mae)
+  df.to_csv(f'ie_{xc}.csv', header=False, index=None)
