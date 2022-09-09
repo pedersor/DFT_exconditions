@@ -87,7 +87,7 @@ class CondChecker():
     exc_gams = np.array([self.get_Exc_gam(gam) for gam in gams])
     return exc_gams
 
-  def ec_scaling_check(self, tol=1e-6):
+  def ec_scaling_check(self, tol=1e-9):
     if self.xc[0] != ',':
       raise ValueError('Need correlation functional')
 
@@ -98,15 +98,52 @@ class CondChecker():
 
     # small (s) gam < 1
     ec_gams_s = self.get_Exc_gams(gams_s)
-    cond_s = tol < gams_s * ec - ec_gams_s
+    cond_s = -tol < gams_s * ec - ec_gams_s
     cond_s = np.all(cond_s)
 
     # large (l) gam > 1
     ec_gams_l = self.get_Exc_gams(gams_l)
-    cond_l = tol > gams_l * ec - ec_gams_l
+    cond_l = -tol > gams_l * ec - ec_gams_l
     cond_l = np.all(cond_l)
 
     return cond_s and cond_l
+
+  def tc_non_negativity(self, tol=1e-9, end_pt_skip=3):
+    if self.xc[0] != ',':
+      raise ValueError('Need correlation functional')
+
+    ec_gams = self.get_Exc_gams(self.gams)
+    ec_deriv = self.deriv_fn(ec_gams, self.gams)
+    cond = gams * ec_deriv - ec_gams
+    # skip end points (inaccurate deriv.)
+    cond = cond[end_pt_skip:-end_pt_skip] >= -tol
+    cond = np.all(cond)
+
+    return cond
+
+  @staticmethod
+  def grid_spacing(arr):
+    """ Get uniform spacing of gammas. """
+    dx = arr[1] - arr[0]
+    dx_alt = (arr[-1] - arr[0]) / (len(arr) - 1)
+    np.testing.assert_allclose(
+        dx,
+        dx_alt,
+        err_msg='values need to be uniformly spaced.',
+    )
+    return dx
+
+  def deriv_fn(self, arr, grids):
+    """ Numerical 1st derivative of arr on grids."""
+    dx = self.grid_spacing(grids)
+    deriv = np.gradient(arr, dx, edge_order=2, axis=0)
+    return deriv
+
+  def deriv2_fn(self, arr, grids):
+    """ Numerical 2nd derivative of arr on grids."""
+    dx = self.grid_spacing(grids)
+    deriv2 = np.diff(arr, 2, axis=0) / (dx**2)
+    return deriv2
 
 
 if __name__ == '__main__':
@@ -128,6 +165,6 @@ if __name__ == '__main__':
   gams = np.linspace(0.01, 2)
   checker = CondChecker(mf, gams)
 
-  ec_scaling_check = checker.ec_scaling_check()
+  check = checker.tc_non_negativity()
 
   print()
