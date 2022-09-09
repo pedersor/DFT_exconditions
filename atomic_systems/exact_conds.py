@@ -174,6 +174,17 @@ class CondChecker():
 
     return cond
 
+  def adiabatic_ec_concavity(self, tol=1e-6, end_pt_skip=3):
+    if self.xc[0] != ',':
+      raise ValueError('Need correlation functional')
+
+    ec_invgams = self.get_Exc_gams(1 / self.gams)
+    cond = self.deriv2_fn((self.gams**2) * ec_invgams, self.gams)
+    cond = cond[end_pt_skip:-end_pt_skip] <= tol
+    cond = np.all(cond)
+
+    return cond
+
 
 if __name__ == '__main__':
 
@@ -194,4 +205,6 @@ if __name__ == '__main__':
   gams = np.linspace(0.01, 2)
   checker = CondChecker(mf, gams)
 
-  check = checker.tc_upper_bound()
+  check = checker.adiabatic_ec_concavity()
+
+  print()
