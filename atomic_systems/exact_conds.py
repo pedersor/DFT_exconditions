@@ -87,6 +87,32 @@ class CondChecker():
     exc_gams = np.array([self.get_Exc_gam(gam) for gam in gams])
     return exc_gams
 
+  @staticmethod
+  def grid_spacing(arr):
+    """ Get uniform spacing of gammas. """
+    dx = arr[1] - arr[0]
+    dx_alt = (arr[-1] - arr[0]) / (len(arr) - 1)
+    np.testing.assert_allclose(
+        dx,
+        dx_alt,
+        err_msg='values need to be uniformly spaced.',
+    )
+    return dx
+
+  def deriv_fn(self, arr, grids):
+    """ Numerical 1st derivative of arr on grids."""
+    dx = self.grid_spacing(grids)
+    deriv = np.gradient(arr, dx, edge_order=2, axis=0)
+    return deriv
+
+  def deriv2_fn(self, arr, grids):
+    """ Numerical 2nd derivative of arr on grids."""
+    dx = self.grid_spacing(grids)
+    deriv2 = np.diff(arr, 2, axis=0) / (dx**2)
+    return deriv2
+
+  ## Exact conditions
+
   def ec_scaling_check(self, tol=1e-9):
     if self.xc[0] != ',':
       raise ValueError('Need correlation functional')
@@ -120,30 +146,6 @@ class CondChecker():
     cond = np.all(cond)
 
     return cond
-
-  @staticmethod
-  def grid_spacing(arr):
-    """ Get uniform spacing of gammas. """
-    dx = arr[1] - arr[0]
-    dx_alt = (arr[-1] - arr[0]) / (len(arr) - 1)
-    np.testing.assert_allclose(
-        dx,
-        dx_alt,
-        err_msg='values need to be uniformly spaced.',
-    )
-    return dx
-
-  def deriv_fn(self, arr, grids):
-    """ Numerical 1st derivative of arr on grids."""
-    dx = self.grid_spacing(grids)
-    deriv = np.gradient(arr, dx, edge_order=2, axis=0)
-    return deriv
-
-  def deriv2_fn(self, arr, grids):
-    """ Numerical 2nd derivative of arr on grids."""
-    dx = self.grid_spacing(grids)
-    deriv2 = np.diff(arr, 2, axis=0) / (dx**2)
-    return deriv2
 
 
 if __name__ == '__main__':
