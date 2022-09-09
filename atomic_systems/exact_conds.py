@@ -83,9 +83,30 @@ class CondChecker():
 
     return exc
 
-  def get_Exc_gams(self):
-    exc_gams = np.array([self.get_Exc_gam(gam) for gam in self.gams])
+  def get_Exc_gams(self, gams):
+    exc_gams = np.array([self.get_Exc_gam(gam) for gam in gams])
     return exc_gams
+
+  def ec_scaling_check(self, tol=1e-6):
+    if self.xc[0] != ',':
+      raise ValueError('Need correlation functional')
+
+    ec = self.get_Exc_gam(1)
+
+    gams_s = self.gams[np.where(self.gams < 1, True, False)]
+    gams_l = self.gams[np.where(self.gams > 1, True, False)]
+
+    # small (s) gam < 1
+    ec_gams_s = self.get_Exc_gams(gams_s)
+    cond_s = tol < gams_s * ec - ec_gams_s
+    cond_s = np.all(cond_s)
+
+    # large (l) gam > 1
+    ec_gams_l = self.get_Exc_gams(gams_l)
+    cond_l = tol > gams_l * ec - ec_gams_l
+    cond_l = np.all(cond_l)
+
+    return cond_s and cond_l
 
 
 if __name__ == '__main__':
@@ -93,20 +114,20 @@ if __name__ == '__main__':
   import matplotlib.pyplot as plt
 
   mol = gto.M(
-      atom='He 0 0 0',
+      atom='Li 0 0 0',
       basis='ccpv5z',
-      spin=0,
+      spin=1,
   )
 
-  xc = 'pbe'
-  mf = dft.RKS(mol)
+  xc = 'm06'
+  mf = dft.UKS(mol)
   mf.xc = xc
   mf.kernel()
-  mf.xc = ',pbe'
+  mf.xc = ',m06'
 
   gams = np.linspace(0.01, 2)
   checker = CondChecker(mf, gams)
 
-  exc_gams = checker.get_Exc_gams()
+  ec_scaling_check = checker.ec_scaling_check()
 
-  plt.plot(gams, exc_gams)
+  print()
