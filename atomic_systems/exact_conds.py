@@ -113,6 +113,15 @@ class CondChecker():
 
   ## Exact conditions
 
+  def ec_non_positivity(self, tol=1e-9):
+
+    ec_gams = self.get_Exc_gams(self.gams)
+
+    cond = ec_gams <= tol
+    cond = np.all(cond)
+
+    return cond
+
   def ec_scaling_check(self, tol=1e-9):
     if self.xc[0] != ',':
       raise ValueError('Need correlation functional')
@@ -205,6 +214,6 @@ if __name__ == '__main__':
   gams = np.linspace(0.01, 2)
   checker = CondChecker(mf, gams)
 
-  check = checker.adiabatic_ec_concavity()
+  check = checker.ec_non_positivity()
 
   print()
