@@ -140,9 +140,36 @@ class CondChecker():
 
     ec_gams = self.get_Exc_gams(self.gams)
     ec_deriv = self.deriv_fn(ec_gams, self.gams)
-    cond = gams * ec_deriv - ec_gams
+    tc_gams = self.gams * ec_deriv - ec_gams
     # skip end points (inaccurate deriv.)
-    cond = cond[end_pt_skip:-end_pt_skip] >= -tol
+    cond = tc_gams[end_pt_skip:-end_pt_skip] >= -tol
+    cond = np.all(cond)
+
+    return cond
+
+  def tc_upper_bound(
+      self,
+      tol=1e-6,
+      end_pt_skip=3,
+      zero_gams=None,
+  ):
+    if self.xc[0] != ',':
+      raise ValueError('Need correlation functional')
+
+    ec_gams = self.get_Exc_gams(self.gams)
+    ec_deriv = self.deriv_fn(ec_gams, self.gams)
+    tc_gams = self.gams * ec_deriv - ec_gams
+
+    # Ec(\gamma -> 0) from linear extrapolation
+    if zero_gams is None:
+      center = 1e-3
+      step = 1e-5
+      zero_gams = np.linspace(center - 5 * step, center + 5 * step, num=10)
+    ec_gams0 = self.get_Exc_gams(zero_gams) / zero_gams
+    _, ec_extrap_gam0 = np.polyfit(zero_gams, ec_gams0, deg=1)
+
+    cond = tc_gams + (self.gams * ec_extrap_gam0) - ec_gams
+    cond = cond[end_pt_skip:-end_pt_skip] <= tol
     cond = np.all(cond)
 
     return cond
@@ -158,15 +185,13 @@ if __name__ == '__main__':
       spin=1,
   )
 
-  xc = 'm06'
+  xc = 'pbe'
   mf = dft.UKS(mol)
   mf.xc = xc
   mf.kernel()
-  mf.xc = ',m06'
+  mf.xc = ',pbe'
 
   gams = np.linspace(0.01, 2)
   checker = CondChecker(mf, gams)
 
-  check = checker.tc_non_negativity()
-
-  print()
+  check = checker.tc_upper_bound()
