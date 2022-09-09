@@ -194,6 +194,30 @@ class CondChecker():
 
     return cond
 
+  def check_conditions(self, conds_str_list=None):
+    """ Check several different exact conditions."""
+
+    # all exact conditions
+    conds = {
+        'ec_non_positivity': self.ec_non_positivity,
+        'ec_scaling_check': self.ec_scaling_check,
+        'tc_non_negativity': self.tc_non_negativity,
+        'tc_upper_bound': self.tc_upper_bound,
+        'adiabatic_ec_concavity': self.adiabatic_ec_concavity,
+    }
+
+    # run all checks
+    if conds_str_list is None:
+      conds_str_list = conds.keys()
+
+    res = {}
+    # note: default settings only across all condition checks
+    for cond in conds_str_list:
+      check = conds[cond]()
+      res[cond] = check
+
+    return res
+
 
 if __name__ == '__main__':
 
@@ -209,11 +233,11 @@ if __name__ == '__main__':
   mf = dft.UKS(mol)
   mf.xc = xc
   mf.kernel()
-  mf.xc = ',pbe'
+  mf.xc = ',gga_c_pbe'
 
   gams = np.linspace(0.01, 2)
   checker = CondChecker(mf, gams)
 
-  check = checker.ec_non_positivity()
+  check = checker.check_conditions()
 
   print()
