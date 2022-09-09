@@ -16,18 +16,18 @@ class CondChecker():
     self.xc = mf.xc
     self.xctype = mf._numint._xc_type(mf.xc)
     self.weights = mf.grids.weights
-    self.nelec = self.mol.nelec
+    self.nelec = np.array(self.mol.nelec, dtype=np.float64)
     self.spin = self.mol.spin
 
     # setup density (rho)
     ao_value = numint.eval_ao(self.mol, mf.grids.coords, deriv=2)
     if self.spin == 0:
       dm = mf.make_rdm1()
-      self.rho = numint.eval_rho(mol, ao_value, dm, xctype=self.xctype)
+      self.rho = numint.eval_rho(self.mol, ao_value, dm, xctype=self.xctype)
     else:
       dm_up, dm_dn = mf.make_rdm1()
-      rho_up = numint.eval_rho(mol, ao_value, dm_up, xctype=self.xctype)
-      rho_dn = numint.eval_rho(mol, ao_value, dm_dn, xctype=self.xctype)
+      rho_up = numint.eval_rho(self.mol, ao_value, dm_up, xctype=self.xctype)
+      rho_dn = numint.eval_rho(self.mol, ao_value, dm_dn, xctype=self.xctype)
       self.rho = (rho_up, rho_dn)
 
   def get_scaled_sys(self, gam):
@@ -65,8 +65,8 @@ class CondChecker():
     if self.spin == 0:
       rho = scaled_rho[0]
       int_nelec = np.einsum('i,i->', rho, scaled_weights)
-      nelec = sum(list(self.mol.nelec))
-      np.testing.assert_allclose(int_nelec, nelec)
+      nelec = np.sum(self.nelec)
+      np.testing.assert_allclose(int_nelec, nelec, rtol=1e-06)
 
       exc = np.einsum('i,i,i->', eps_xc, rho, scaled_weights)
 
@@ -75,9 +75,9 @@ class CondChecker():
       rho_dn = scaled_rho[1][0]
 
       int_nelec_up = np.einsum('i,i->', rho_up, scaled_weights)
-      np.testing.assert_allclose(int_nelec_up, self.nelec[0])
+      np.testing.assert_allclose(int_nelec_up, self.nelec[0], rtol=1e-06)
       int_nelec_dn = np.einsum('i,i->', rho_dn, scaled_weights)
-      np.testing.assert_allclose(int_nelec_dn, self.nelec[1])
+      np.testing.assert_allclose(int_nelec_dn, self.nelec[1], rtol=1e-06)
 
       exc = np.einsum('i,i,i->', eps_xc, rho_up + rho_dn, scaled_weights)
 

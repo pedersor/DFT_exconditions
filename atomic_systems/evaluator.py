@@ -10,13 +10,15 @@ from pyscf.dft import numint
 
 import utils
 from dataset import Entry, System
+from exact_conds import CondChecker
 
 
 class PyscfEvaluator():
 
-  def __init__(self, xc):
+  def __init__(self, xc, c=None):
     xc = xc.lower()
     self.xc = xc
+    self.c = c
 
     if xc == "ccsd":
       self.calc = "ccsd"
@@ -57,3 +59,22 @@ class PyscfEvaluator():
   def get_error(self, entry: Union[Entry, Dict]):
     val = self.evaluate(entry)
     return val - entry.get_true_val()
+
+  def exact_cond_checks(
+      self,
+      entry: Union[Entry, Dict],
+      gams=np.linspace(0.01, 2),
+  ):
+    if self.c is None:
+      raise ValueError('specify correlation functional for condition checks.')
+
+    mfs = [self.run(system) for system in entry.get_systems()]
+
+    sys_checks = []
+    for mf in mfs:
+      mf.xc = self.c
+      checker = CondChecker(mf, gams)
+      checks = checker.check_conditions()
+      sys_checks.append(checks)
+
+    return sys_checks
