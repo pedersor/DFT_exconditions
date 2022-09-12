@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import pandas as pd
 
 from evaluator import PyscfEvaluator
 from dataset import Dataset
@@ -8,7 +9,9 @@ from dataset import Dataset
 xc = 'm06'
 
 dset = Dataset('ie_atoms.yaml')
-evl = PyscfEvaluator(xc, c=f',{xc}')
+
+scf_args = {'max_cycle': 100, 'conv_tol': 1e-9}
+evl = PyscfEvaluator(xc, c=f',{xc}', scf_args=scf_args)
 
 all_sys_checks = []
 for i in range(len(dset)):
@@ -32,6 +35,6 @@ for system in all_sys_checks:
     flatten_sys_checks[key].append(system[key])
 
 checks = {key: np.all(value) for key, value in flatten_sys_checks.items()}
-
-print(flatten_sys_checks)
+df = pd.DataFrame.from_dict(checks)
+df.to_csv(f'{xc}.csv', header=False, index=False)
 print(checks)

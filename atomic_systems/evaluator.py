@@ -15,10 +15,11 @@ from exact_conds import CondChecker
 
 class PyscfEvaluator():
 
-  def __init__(self, xc, c=None):
+  def __init__(self, xc, c=None, scf_args={}):
     xc = xc.lower()
     self.xc = xc
     self.c = c
+    self.scf_args = scf_args
 
     if xc == "ccsd":
       self.calc = "ccsd"
@@ -38,6 +39,7 @@ class PyscfEvaluator():
       else:
         mf = dft.UKS(mol)
       mf.xc = self.xc
+      mf = self.use_scf_args(mf)
       mf.kernel()
       return mf
 
@@ -45,11 +47,19 @@ class PyscfEvaluator():
       # HF calculation
 
       if mol.spin == 0:
-        mf = scf.RHF(mol).run()
+        mf = scf.RHF(mol)
       else:
-        mf = scf.UHF(mol).run()
-
+        mf = scf.UHF(mol)
+      mf = self.use_scf_args(mf)
+      mf.kernel()
       return mf
+
+  def use_scf_args(self, mf):
+
+    for key in self.scf_args:
+      setattr(mf, key, self.scf_args[key])
+
+    return mf
 
   def evaluate(self, entry: Union[Entry, Dict]):
     mfs = [self.run(system) for system in entry.get_systems()]
