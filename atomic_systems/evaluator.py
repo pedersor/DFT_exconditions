@@ -2,13 +2,10 @@ from __future__ import annotations
 from typing import Dict, Union, List, Optional
 import sys
 
-sys.path.append('../')
-
 import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
 
-import utils
 from dataset import Entry, System
 from exact_conds import CondChecker
 
