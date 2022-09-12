@@ -20,6 +20,7 @@ class PyscfEvaluator():
     self.xc = xc
     self.c = c
     self.scf_args = scf_args
+    self.mfs = None
 
     if xc == "ccsd":
       self.calc = "ccsd"
@@ -61,9 +62,20 @@ class PyscfEvaluator():
 
     return mf
 
+  def get_mfs(self, entry: Union[Entry, Dict]):
+    self.mfs = [self.run(system) for system in entry.get_systems()]
+    return self.mfs
+
+  def reset_mfs(self):
+    self.mfs = None
+    return self
+
   def evaluate(self, entry: Union[Entry, Dict]):
-    mfs = [self.run(system) for system in entry.get_systems()]
-    val = entry.get_val(mfs)
+
+    if self.mfs is None:
+      self.mfs = self.get_mfs(entry)
+
+    val = entry.get_val(self.mfs)
     return val
 
   def get_error(self, entry: Union[Entry, Dict]):
@@ -78,10 +90,11 @@ class PyscfEvaluator():
     if self.c is None:
       raise ValueError('specify correlation functional for condition checks.')
 
-    mfs = [self.run(system) for system in entry.get_systems()]
+    if self.mfs is None:
+      self.mfs = self.get_mfs(entry)
 
     sys_checks = []
-    for mf in mfs:
+    for mf in self.mfs:
       mf.xc = self.c
       checker = CondChecker(mf, gams)
       checks = checker.check_conditions()

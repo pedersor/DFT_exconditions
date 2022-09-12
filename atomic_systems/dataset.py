@@ -145,6 +145,8 @@ if __name__ == '__main__':
     df['label'].append(label)
     df['error'].append(error)
 
+    evl.reset_mfs()
+
   df = pd.DataFrame.from_dict(df)
   mae = np.mean(np.abs(df['error'].to_numpy())) * HAR_TO_KCAL
   print('MAE = ', mae)
