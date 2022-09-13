@@ -127,7 +127,7 @@ class CondChecker():
 
   def ec_non_positivity(self, tol=5e-6):
 
-    ec_gams = self.get_Exc_gams(self.gams)
+    ec_gams = self.get_Ec_gams(self.gams)
 
     cond = ec_gams <= tol
     cond = np.all(cond)
@@ -135,31 +135,27 @@ class CondChecker():
     return cond
 
   def ec_scaling_check(self, tol=5e-6):
-    if self.xc[0] != ',':
-      raise ValueError('Need correlation functional')
 
-    ec = self.get_Exc_gam(1)
+    ec = self.get_Ec_gam(1)
 
     gams_s = self.gams[np.where(self.gams < 1, True, False)]
     gams_l = self.gams[np.where(self.gams > 1, True, False)]
 
     # small (s) gam < 1
-    ec_gams_s = self.get_Exc_gams(gams_s)
+    ec_gams_s = self.get_Ec_gams(gams_s)
     cond_s = -tol < gams_s * ec - ec_gams_s
     cond_s = np.all(cond_s)
 
     # large (l) gam > 1
-    ec_gams_l = self.get_Exc_gams(gams_l)
+    ec_gams_l = self.get_Ec_gams(gams_l)
     cond_l = tol > gams_l * ec - ec_gams_l
     cond_l = np.all(cond_l)
 
     return cond_s and cond_l
 
   def tc_non_negativity(self, tol=5e-6, end_pt_skip=3):
-    if self.xc[0] != ',':
-      raise ValueError('Need correlation functional')
 
-    ec_gams = self.get_Exc_gams(self.gams)
+    ec_gams = self.get_Ec_gams(self.gams)
     ec_deriv = self.deriv_fn(ec_gams, self.gams)
     tc_gams = self.gams * ec_deriv - ec_gams
     # skip end points (inaccurate deriv.)
@@ -174,10 +170,8 @@ class CondChecker():
       end_pt_skip=3,
       zero_gams=None,
   ):
-    if self.xc[0] != ',':
-      raise ValueError('Need correlation functional')
 
-    ec_gams = self.get_Exc_gams(self.gams)
+    ec_gams = self.get_Ec_gams(self.gams)
     ec_deriv = self.deriv_fn(ec_gams, self.gams)
     tc_gams = self.gams * ec_deriv - ec_gams
 
@@ -186,7 +180,7 @@ class CondChecker():
       center = 1e-3
       step = 1e-5
       zero_gams = np.linspace(center - 5 * step, center + 5 * step, num=10)
-    ec_gams0 = self.get_Exc_gams(zero_gams) / zero_gams
+    ec_gams0 = self.get_Ec_gams(zero_gams) / zero_gams
     _, ec_extrap_gam0 = np.polyfit(zero_gams, ec_gams0, deg=1)
 
     cond = tc_gams + (self.gams * ec_extrap_gam0) - ec_gams
@@ -196,10 +190,8 @@ class CondChecker():
     return cond
 
   def adiabatic_ec_concavity(self, tol=5e-6, end_pt_skip=3):
-    if self.xc[0] != ',':
-      raise ValueError('Need correlation functional')
 
-    ec_invgams = self.get_Exc_gams(1 / self.gams)
+    ec_invgams = self.get_Ec_gams(1 / self.gams)
     cond = self.deriv2_fn((self.gams**2) * ec_invgams, self.gams)
     cond = cond[end_pt_skip:-end_pt_skip] <= tol
     cond = np.all(cond)
@@ -229,38 +221,3 @@ class CondChecker():
       res[cond] = check
 
     return res
-
-
-if __name__ == '__main__':
-
-  import matplotlib.pyplot as plt
-
-  mol = gto.M(
-      atom='Li 0 0 0',
-      basis='ccpv5z',
-      spin=1,
-  )
-
-  # test different ways of obtaining Ec
-  xcs = [
-      ('scan', 'mgga_c_scan'),
-      ('pbe', 'gga_c_pbe'),
-      ('gga_x_am05,gga_c_am05', 'gga_c_am05'),
-      ('b3lyp', '.81 * LYP + .19 * VWN'),
-  ]
-  gams = np.linspace(0.01, 2)
-  for xc, c in xcs:
-    mf = dft.UKS(mol)
-    mf.xc = xc
-    mf.kernel()
-    checker = CondChecker(mf, gams)
-
-    # from explicit corr. functional
-    checker.xc = f',{c}'
-    ec_gams_1 = checker.get_Exc_gams(gams)
-
-    # from limit definition
-    checker.xc = xc
-    ec_gams_2 = checker.get_Ec_gams(gams)
-
-    np.testing.assert_allclose(ec_gams_1, ec_gams_2, atol=1e-3)
