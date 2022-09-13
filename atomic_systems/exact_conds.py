@@ -138,7 +138,7 @@ class CondChecker():
 
     # large (l) gam > 1
     ec_gams_l = self.get_Exc_gams(gams_l)
-    cond_l = -tol > gams_l * ec - ec_gams_l
+    cond_l = tol > gams_l * ec - ec_gams_l
     cond_l = np.all(cond_l)
 
     return cond_s and cond_l
