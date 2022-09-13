@@ -66,7 +66,7 @@ class CondChecker():
       rho = scaled_rho[0]
       int_nelec = np.einsum('i,i->', rho, scaled_weights)
       nelec = np.sum(self.nelec)
-      np.testing.assert_allclose(int_nelec, nelec, rtol=1e-06)
+      np.testing.assert_allclose(int_nelec, nelec, rtol=1e-03)
 
       exc = np.einsum('i,i,i->', eps_xc, rho, scaled_weights)
 
@@ -75,9 +75,9 @@ class CondChecker():
       rho_dn = scaled_rho[1][0]
 
       int_nelec_up = np.einsum('i,i->', rho_up, scaled_weights)
-      np.testing.assert_allclose(int_nelec_up, self.nelec[0], rtol=1e-06)
+      np.testing.assert_allclose(int_nelec_up, self.nelec[0], rtol=1e-03)
       int_nelec_dn = np.einsum('i,i->', rho_dn, scaled_weights)
-      np.testing.assert_allclose(int_nelec_dn, self.nelec[1], rtol=1e-06)
+      np.testing.assert_allclose(int_nelec_dn, self.nelec[1], rtol=1e-03)
 
       exc = np.einsum('i,i,i->', eps_xc, rho_up + rho_dn, scaled_weights)
 
@@ -113,7 +113,7 @@ class CondChecker():
 
   ## Exact conditions
 
-  def ec_non_positivity(self, tol=1e-9):
+  def ec_non_positivity(self, tol=5e-6):
 
     ec_gams = self.get_Exc_gams(self.gams)
 
@@ -122,7 +122,7 @@ class CondChecker():
 
     return cond
 
-  def ec_scaling_check(self, tol=1e-9):
+  def ec_scaling_check(self, tol=5e-6):
     if self.xc[0] != ',':
       raise ValueError('Need correlation functional')
 
@@ -143,7 +143,7 @@ class CondChecker():
 
     return cond_s and cond_l
 
-  def tc_non_negativity(self, tol=1e-9, end_pt_skip=3):
+  def tc_non_negativity(self, tol=5e-6, end_pt_skip=3):
     if self.xc[0] != ',':
       raise ValueError('Need correlation functional')
 
@@ -183,7 +183,7 @@ class CondChecker():
 
     return cond
 
-  def adiabatic_ec_concavity(self, tol=1e-6, end_pt_skip=3):
+  def adiabatic_ec_concavity(self, tol=5e-6, end_pt_skip=3):
     if self.xc[0] != ',':
       raise ValueError('Need correlation functional')
 
