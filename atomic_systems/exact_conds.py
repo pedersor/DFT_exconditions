@@ -57,6 +57,18 @@ class CondChecker():
 
     return scaled_rho
 
+  def get_Ec_gam(self, gam, gam_inf=5000):
+
+    # E_x = \lim_{gamma \to \infty} E_xc[n_gamma] / gamma
+    ex = self.get_Exc_gam(gam=gam * gam_inf) / gam_inf
+
+    ec = self.get_Exc_gam(gam) - ex
+    return ec
+
+  def get_Ec_gams(self, gams):
+    ec_gams = np.array([self.get_Ec_gam(gam) for gam in gams])
+    return ec_gams
+
   def get_Exc_gam(self, gam):
 
     scaled_rho, scaled_weights = self.get_scaled_sys(gam)
@@ -229,15 +241,26 @@ if __name__ == '__main__':
       spin=1,
   )
 
-  xc = 'pbe'
-  mf = dft.UKS(mol)
-  mf.xc = xc
-  mf.kernel()
-  mf.xc = ',gga_c_pbe'
-
+  # test different ways of obtaining Ec
+  xcs = [
+      ('scan', 'mgga_c_scan'),
+      ('pbe', 'gga_c_pbe'),
+      ('gga_x_am05,gga_c_am05', 'gga_c_am05'),
+      ('b3lyp', '.81 * LYP + .19 * VWN'),
+  ]
   gams = np.linspace(0.01, 2)
-  checker = CondChecker(mf, gams)
+  for xc, c in xcs:
+    mf = dft.UKS(mol)
+    mf.xc = xc
+    mf.kernel()
+    checker = CondChecker(mf, gams)
 
-  check = checker.check_conditions()
+    # from explicit corr. functional
+    checker.xc = f',{c}'
+    ec_gams_1 = checker.get_Exc_gams(gams)
 
-  print()
+    # from limit definition
+    checker.xc = xc
+    ec_gams_2 = checker.get_Ec_gams(gams)
+
+    np.testing.assert_allclose(ec_gams_1, ec_gams_2, atol=1e-3)
