@@ -39,8 +39,6 @@ class PyscfEvaluator():
       mf.xc = self.xc
       mf = self.use_scf_args(mf)
       mf.kernel()
-      return mf
-
     elif self.calc == "hf":
       # HF calculation
 
@@ -50,7 +48,10 @@ class PyscfEvaluator():
         mf = scf.UHF(mol)
       mf = self.use_scf_args(mf)
       mf.kernel()
-      return mf
+
+    if not mf.converged:
+      raise ValueError(f'SCF cycle did not converge for system: {system}')
+    return mf
 
   def use_scf_args(self, mf):
 
