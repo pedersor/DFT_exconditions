@@ -12,10 +12,9 @@ from exact_conds import CondChecker
 
 class PyscfEvaluator():
 
-  def __init__(self, xc, c=None, scf_args={}):
+  def __init__(self, xc, scf_args={}):
     xc = xc.lower()
     self.xc = xc
-    self.c = c
     self.scf_args = scf_args
     self.mfs = None
 
@@ -92,14 +91,12 @@ class PyscfEvaluator():
       entry: Union[Entry, Dict],
       gams=np.linspace(0.01, 2),
   ):
-    if self.c is None:
-      raise ValueError('specify correlation functional for condition checks.')
 
     self.get_mfs(entry)
 
     sys_checks = []
     for mf in self.mfs:
-      mf.xc = self.c
+      mf.xc = self.xc
       checker = CondChecker(mf, gams)
       checks = checker.check_conditions()
       sys_checks.append(checks)

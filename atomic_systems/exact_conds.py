@@ -4,6 +4,7 @@ import numpy as np
 
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
+from scipy.stats import linregress
 
 
 class CondChecker():
@@ -181,7 +182,12 @@ class CondChecker():
       step = 1e-5
       zero_gams = np.linspace(center - 5 * step, center + 5 * step, num=10)
     ec_gams0 = self.get_Ec_gams(zero_gams) / zero_gams
-    _, ec_extrap_gam0 = np.polyfit(zero_gams, ec_gams0, deg=1)
+
+    variation = np.abs(np.amax(ec_gams0) - np.amin(ec_gams0))
+    if variation > 0.01:
+      raise ValueError(
+          "Issue with gam->0 extrapolation. Adjust zero_gams parameter.")
+    _, ec_extrap_gam0, _, _, _ = linregress(zero_gams, ec_gams0)
 
     cond = tc_gams + (self.gams * ec_extrap_gam0) - ec_gams
     cond = cond[end_pt_skip:-end_pt_skip] <= tol
