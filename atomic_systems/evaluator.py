@@ -49,8 +49,6 @@ class PyscfEvaluator():
       mf = self.use_scf_args(mf)
       mf.kernel()
 
-    if not mf.converged:
-      raise ValueError(f'SCF cycle did not converge for system: {system}')
     return mf
 
   def use_scf_args(self, mf):
@@ -61,17 +59,26 @@ class PyscfEvaluator():
     return mf
 
   def get_mfs(self, entry: Union[Entry, Dict]):
-    self.mfs = [self.run(system) for system in entry.get_systems()]
-    return self.mfs
+
+    if self.mfs is not None:
+      return
+
+    self.mfs = []
+    for system in entry.get_systems():
+      mf = self.run(system)
+      if not mf.converged:
+        raise ValueError(f'SCF cycle did not converge for system: {system}')
+
+      self.mfs.append(mf)
+
+    return
 
   def reset_mfs(self):
     self.mfs = None
-    return self
 
   def evaluate(self, entry: Union[Entry, Dict]):
 
-    if self.mfs is None:
-      self.mfs = self.get_mfs(entry)
+    self.get_mfs(entry)
 
     val = entry.get_val(self.mfs)
     return val
@@ -88,8 +95,7 @@ class PyscfEvaluator():
     if self.c is None:
       raise ValueError('specify correlation functional for condition checks.')
 
-    if self.mfs is None:
-      self.mfs = self.get_mfs(entry)
+    self.get_mfs(entry)
 
     sys_checks = []
     for mf in self.mfs:
