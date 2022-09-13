@@ -6,12 +6,17 @@ from evaluator import PyscfEvaluator
 import dataset
 from dataset import Dataset
 
-xc = sys.argv[1]
+DEBUG = False
+
+if DEBUG:
+  xc = 'm06'
+else:
+  xc = sys.argv[1]
 
 dset = Dataset('ie_atoms.yaml')
 
 scf_args = {'max_cycle': 100, 'conv_tol': 1e-7}
-evl = PyscfEvaluator(xc, c=f',{xc}', scf_args=scf_args)
+evl = PyscfEvaluator(xc, scf_args=scf_args)
 
 all_sys_checks = []
 all_sys_errors = {'label': [], 'error': []}
@@ -31,6 +36,9 @@ for i in range(len(dset)):
 
   # remove cached mf objects
   evl.reset_mfs()
+
+  if DEBUG and i == 3:
+    break
 
 # organize exact condition checks
 flatten_sys_checks = {key: [] for key in all_sys_checks[0].keys()}
