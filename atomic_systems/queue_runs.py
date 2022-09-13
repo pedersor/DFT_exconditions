@@ -7,7 +7,7 @@ import pylibxc
 
 DEBUG = False
 
-xcs = ['m06', 'pbe', 'sogga11', 'scan', 'r2scan']
+xcs = ['m06', 'pbe', 'sogga11', 'scan', 'r2scan', 'lyp', 'mn15']
 
 # out directory
 out_dir = Path('out')
