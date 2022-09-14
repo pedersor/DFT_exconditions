@@ -15,7 +15,7 @@ else:
 
 dset = Dataset('ie_atoms.yaml')
 
-scf_args = {'max_cycle': 100, 'conv_tol': 1e-7}
+scf_args = {'max_cycle': 100, 'conv_tol': 1e-6, 'chkfile': False}
 evl = PyscfEvaluator(xc, scf_args=scf_args)
 
 all_sys_checks = []
