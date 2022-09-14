@@ -41,7 +41,7 @@ class PyscfEvaluator():
 
   def _other_scf_args(self):
     """ Additional scf args to try. """
-    other_scf_args = [{'DIIS': scf.ADIIS, 'diis_space': 14}]
+    other_scf_args = [{'DIIS': scf.ADIIS, 'diis_space': 12}, 'newton']
     return other_scf_args
 
   def run(self, system: System):
@@ -64,13 +64,16 @@ class PyscfEvaluator():
     # try default scf_args and others
     for scf_args in self.scf_args:
       mf = self._use_scf_args(mf, scf_args)
-      mf.kernel(dump_chk=False)
+      mf.kernel()
       if mf.converged:
         break
 
     return mf
 
   def _use_scf_args(self, mf, scf_args):
+
+    if scf_args == 'newton':
+      return mf.newton()
 
     for key in scf_args:
       setattr(mf, key, scf_args[key])

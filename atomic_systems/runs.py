@@ -9,13 +9,19 @@ from dataset import Dataset
 DEBUG = False
 
 if DEBUG:
-  xc = 'm06'
+  xc = 'sogga11'
 else:
   xc = sys.argv[1]
 
 dset = Dataset('ie_atoms.yaml')
 
-scf_args = {'max_cycle': 100, 'conv_tol': 1e-6, 'chkfile': False}
+scf_args = {
+    'max_cycle': 200,
+    'conv_tol': 1e-6,
+    'diis_space': 12,
+    'chkfile': False,
+    'verbose': 4,
+}
 evl = PyscfEvaluator(xc, scf_args=scf_args)
 
 all_sys_checks = []
