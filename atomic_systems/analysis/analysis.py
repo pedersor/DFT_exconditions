@@ -7,12 +7,9 @@ import matplotlib.pyplot as plt
 HAR_TO_KCAL = 627.5
 
 out_dir = Path('../out/')
-nonempirical = ['scan', 'pbe', 'r2scan', 'am05']
-
-
-# sort columns non-empirical -> empirical
-def sort_fn(xc):
-  return int(xc not in nonempirical)
+sorted_cols = [
+    'pbe', 'am05', 'scan', 'r2scan', 'b3lyp', 'sogga11', 'm06', 'b97', 'mn15'
+]
 
 
 def get_ie_err_fig():
@@ -31,9 +28,6 @@ def get_ie_err_fig():
 
   errs_df = pd.DataFrame.from_dict(errs_df)
   errs_df = errs_df.set_index('System')
-
-  cols_to_sort = errs_df.columns
-  sorted_cols = sorted(cols_to_sort, key=sort_fn)
   errs_df = errs_df.reindex(sorted_cols, axis=1)
 
   ax = plt.axes()
@@ -74,9 +68,6 @@ def exact_cond_checks_fig():
 
   checks_df = pd.DataFrame.from_dict(checks_df)
   checks_df = checks_df.set_index('Exact conds')
-
-  cols_to_sort = checks_df.columns
-  sorted_cols = sorted(cols_to_sort, key=sort_fn)
   checks_df = checks_df.reindex(sorted_cols, axis=1)
 
   ax = plt.axes()
