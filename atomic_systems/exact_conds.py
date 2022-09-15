@@ -167,7 +167,7 @@ class CondChecker():
 
   def tc_upper_bound(
       self,
-      tol=1e-6,
+      tol=5e-4,
       end_pt_skip=3,
       zero_gams=None,
   ):
@@ -181,14 +181,25 @@ class CondChecker():
       center = 1e-2
       step = 1e-4
       zero_gams = np.linspace(center - 5 * step, center + 5 * step, num=10)
-    ec_gams0 = self.get_Ec_gams(zero_gams) / zero_gams
 
-    _, ec_extrap_gam0, r_val, _, _ = linregress(zero_gams, ec_gams0)
+    ec_zero_gams = self.get_Ec_gams(zero_gams)
+    deriv_ec_zero_gams = self.deriv_fn(ec_zero_gams, zero_gams)
+    deriv_ec_zero = np.median(deriv_ec_zero_gams)
+
+    # Use \lim_{gam -> 0} dEc[n_gam]/dgam = \lim_{gam -> 0} Ec[n_gam] / gam
+    # for more numerically accurate limit calculation.
+    lim_ec_zero_gams = ec_zero_gams / zero_gams
+
+    _, lim_ec_zero_extrap, r_val, _, _ = linregress(zero_gams, lim_ec_zero_gams)
     if r_val**2 < 0.7:
       raise ValueError(
           "Issue with gam->0 extrapolation. Adjust zero_gams parameter.")
 
-    cond = tc_gams + (self.gams * ec_extrap_gam0) - ec_gams
+    # Give the benefit of the doubt. Sometimes the extrapolation is unstable,
+    # e.g. in some 1 electron cases where Ec[n_gam] ~ 0.
+    cond_deriv_ec_zero = min(lim_ec_zero_extrap, deriv_ec_zero)
+
+    cond = tc_gams + (self.gams * cond_deriv_ec_zero) - ec_gams
     cond = cond[end_pt_skip:-end_pt_skip] <= tol
     cond = np.all(cond)
 
