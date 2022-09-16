@@ -6,10 +6,20 @@ import matplotlib.pyplot as plt
 
 HAR_TO_KCAL = 627.5
 
-out_dir = Path('../out/')
+out_dir = Path('data/')
 sorted_cols = [
     'pbe', 'am05', 'scan', 'r2scan', 'b3lyp', 'sogga11', 'm06', 'b97', 'mn15'
 ]
+
+pretty_conds = {
+    'ec_non_positivity': '$E_c$ non-positivity',
+    'ec_scaling_check': '$E_c[n_{\gamma}]$ inequalities',
+    'tc_non_negativity': '$T_c$ non-negativity',
+    'tc_upper_bound': '$T_c$ upper-bound',
+    'adiabatic_ec_concavity': '$E^{\lambda}_c[n]$ concavity',
+    'lieb_oxford_bound_exc': r'Lieb-Oxford bound on $E_{xc}$',
+    'lieb_oxford_bound_uxc': r'Lieb-Oxford bound on $U_{xc}$',
+}
 
 
 def get_ie_err_fig():
@@ -68,6 +78,7 @@ def exact_cond_checks_fig():
 
   checks_df = pd.DataFrame.from_dict(checks_df)
   checks_df = checks_df.set_index('Exact conds')
+  checks_df = checks_df.rename(pretty_conds, axis='index')
   checks_df = checks_df.reindex(sorted_cols, axis=1)
 
   ax = plt.axes()
