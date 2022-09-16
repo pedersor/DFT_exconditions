@@ -21,12 +21,6 @@ mol2 = gto.M(
 )
 mols = [mol1, mol2]
 
-xcs = [
-    ('scan', 'mgga_c_scan'),
-    ('pbe', 'gga_c_pbe'),
-    ('gga_x_am05,gga_c_am05', 'gga_c_am05'),
-    ('b3lyp', '.81 * LYP + .19 * VWN'),
-]
 gams = np.linspace(0.01, 2)
 
 
@@ -35,7 +29,16 @@ def test_ec_consistency():
     1) From explicit corr. functional.
     2) By taking the limit definition for Ex.
     
+    We should obtain same result from either 1) or 2).
   """
+
+  xcs = [
+      ('m06', 'mgga_c_m06'),
+      ('scan', 'mgga_c_scan'),
+      ('pbe', 'gga_c_pbe'),
+      ('gga_x_am05,gga_c_am05', 'gga_c_am05'),
+      ('b3lyp', '.81 * LYP + .19 * VWN'),
+  ]
 
   for mol in mols:
     for xc, c in xcs:
@@ -59,6 +62,14 @@ def test_ec_consistency():
 
 
 def test_exact_conds():
+
+  xcs = [
+      ('scan', 'mgga_c_scan'),
+      ('pbe', 'gga_c_pbe'),
+      ('gga_x_am05,gga_c_am05', 'gga_c_am05'),
+      ('b3lyp', '.81 * LYP + .19 * VWN'),
+  ]
+
   for mol in mols:
     for xc, _ in xcs:
       if mol.spin == 0:

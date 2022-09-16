@@ -70,6 +70,28 @@ class CondChecker():
     ec_gams = np.array([self.get_Ec_gam(gam) for gam in gams])
     return ec_gams
 
+  def get_Ex_lda(self, gam):
+    """ Obtain unpolarized LDA exchange energy. """
+
+    scaled_rho, scaled_weights = self.get_scaled_sys(gam)
+    if self.spin != 0:
+      # run unpolarized LDA calculation
+      scaled_rho = sum(scaled_rho)
+    eps_x = dft.libxc.eval_xc('LDA_X', scaled_rho, spin=0)[0]
+
+    rho = scaled_rho[0]
+    int_nelec = np.einsum('i,i->', rho, scaled_weights)
+    nelec = np.sum(self.nelec)
+    np.testing.assert_allclose(int_nelec, nelec, rtol=1e-03)
+
+    ex = np.einsum('i,i,i->', eps_x, rho, scaled_weights)
+
+    return ex
+
+  def get_Ex_lda_gams(self, gams):
+    ex_gams = np.array([self.get_Ex_lda(gam) for gam in gams])
+    return ex_gams
+
   def get_Exc_gam(self, gam):
 
     scaled_rho, scaled_weights = self.get_scaled_sys(gam)
@@ -214,6 +236,32 @@ class CondChecker():
 
     return cond
 
+  def lieb_oxford_bound_uxc(self, tol=5e-6, lob_coeff=2.27, end_pt_skip=3):
+
+    ec_gams = self.get_Ec_gams(self.gams)
+    ec_deriv = self.deriv_fn(ec_gams, self.gams)
+    tc_gams = self.gams * ec_deriv - ec_gams
+    exc_gams = self.get_Exc_gams(self.gams)
+
+    # LDA exchange
+    ex_lda = self.get_Ex_lda_gams(self.gams)
+    cond = exc_gams - tc_gams - lob_coeff * ex_lda
+    cond = cond[end_pt_skip:-end_pt_skip] >= -tol
+    cond = np.all(cond)
+
+    return cond
+
+  def lieb_oxford_bound_exc(self, tol=5e-6, lob_coeff=2.27):
+
+    # LDA exchange
+    ex_lda = self.get_Ex_lda_gams(self.gams)
+
+    exc = self.get_Exc_gams(self.gams)
+    cond = (exc - lob_coeff * ex_lda) >= -tol
+    cond = np.all(cond)
+
+    return cond
+
   def check_conditions(self, conds_str_list=None):
     """ Check several different exact conditions."""
 
@@ -224,6 +272,8 @@ class CondChecker():
         'tc_non_negativity': self.tc_non_negativity,
         'tc_upper_bound': self.tc_upper_bound,
         'adiabatic_ec_concavity': self.adiabatic_ec_concavity,
+        'lieb_oxford_bound_exc': self.lieb_oxford_bound_exc,
+        'lieb_oxford_bound_uxc': self.lieb_oxford_bound_uxc,
     }
 
     # run all checks
