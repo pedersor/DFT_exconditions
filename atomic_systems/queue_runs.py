@@ -8,14 +8,14 @@ import pylibxc
 DEBUG = False
 
 xcs = [
-    #'m06',
-    #'pbe',
-    #'sogga11',
-    #'scan',
-    #'r2scan',
-    #'b3lyp',
-    #'mn15',
-    #'HYB_GGA_XC_B97',
+    'm06',
+    'pbe',
+    'sogga11',
+    'scan',
+    'r2scan',
+    'b3lyp',
+    'mn15',
+    'HYB_GGA_XC_B97',
     'gga_x_am05,gga_c_am05',
     #'HYB_GGA_XC_CASE21',
 ]
