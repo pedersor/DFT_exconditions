@@ -93,7 +93,7 @@ def exact_cond_checks_fig():
 
   ax.set_title('Exact conditions')
   fig = plot.get_figure()
-  fig.savefig('exact_cond_checks.pdf', bbox_inches='tight')
+  fig.savefig('ie_exact_cond_checks.pdf', bbox_inches='tight')
 
 
 if __name__ == '__main__':

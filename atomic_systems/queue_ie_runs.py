@@ -29,7 +29,7 @@ status = shutil.copy2('ie_atoms.yaml', out_dir)
 
 for xc in xcs:
 
-  run_file = '../runs.py'
+  run_file = '../ie_runs.py'
   job_file = f'{xc}.job'
   run_cmd = f'srun python {run_file} {xc} '
   debug_cmd = f'python3 {run_file} {xc} '

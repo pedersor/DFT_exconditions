@@ -3,26 +3,33 @@ import copy
 import numpy as np
 
 from pyscf import gto, dft, lib, cc, scf
-from pyscf.dft import numint
+from pyscf.dft import numint, libxc
 from scipy.stats import linregress
 
 
 class CondChecker():
   """ check conditions on self-consistent densities. """
 
-  def __init__(self, mf, gams=np.linspace(0.01, 2)):
+  def __init__(self, mf, xc=None, gams=np.linspace(0.01, 2)):
     self.mf = mf
     self.gams = gams
     self.mol = mf.mol
-    self.xc = mf.xc
-    self.xctype = mf._numint._xc_type(mf.xc)
+    if xc is None:
+      self.xc = mf.xc
+    else:
+      self.xc = xc
+    self.xctype = libxc.xc_type(self.xc)
     self.weights = mf.grids.weights
     self.nelec = np.array(self.mol.nelec, dtype=np.float64)
-    self.spin = self.mol.spin
+
+    if self.mol.spin == 0 and self.mol.charge != -1:
+      self.unrestricted = 0
+    else:
+      self.unrestricted = 1
 
     # setup density (rho)
     ao_value = numint.eval_ao(self.mol, mf.grids.coords, deriv=2)
-    if self.spin == 0:
+    if not self.unrestricted:
       dm = mf.make_rdm1()
       self.rho = numint.eval_rho(self.mol, ao_value, dm, xctype=self.xctype)
     else:
@@ -33,7 +40,7 @@ class CondChecker():
 
   def get_scaled_sys(self, gam):
 
-    if self.spin == 0:
+    if not self.unrestricted:
       scaled_rho = self.get_scaled_rho(self.rho, gam)
     else:
       rho_up, rho_dn = self.rho
@@ -74,7 +81,7 @@ class CondChecker():
     """ Obtain unpolarized LDA exchange energy. """
 
     scaled_rho, scaled_weights = self.get_scaled_sys(gam)
-    if self.spin != 0:
+    if self.unrestricted:
       # run unpolarized LDA calculation
       scaled_rho = sum(scaled_rho)
     eps_x = dft.libxc.eval_xc('LDA_X', scaled_rho, spin=0)[0]
@@ -95,9 +102,9 @@ class CondChecker():
   def get_Exc_gam(self, gam):
 
     scaled_rho, scaled_weights = self.get_scaled_sys(gam)
-    eps_xc = dft.libxc.eval_xc(self.xc, scaled_rho, spin=self.spin)[0]
+    eps_xc = dft.libxc.eval_xc(self.xc, scaled_rho, spin=self.unrestricted)[0]
 
-    if self.spin == 0:
+    if not self.unrestricted:
       rho = scaled_rho[0]
       int_nelec = np.einsum('i,i->', rho, scaled_weights)
       nelec = np.sum(self.nelec)

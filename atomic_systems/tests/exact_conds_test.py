@@ -1,6 +1,8 @@
 import pytest
 import sys
 
+sys.path.append('../../')
+
 import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
@@ -48,7 +50,7 @@ def test_ec_consistency():
         mf = dft.UKS(mol)
       mf.xc = xc
       mf.kernel()
-      checker = CondChecker(mf, gams)
+      checker = CondChecker(mf, gams=gams)
 
       # from explicit corr. functional
       checker.xc = f',{c}'
@@ -78,8 +80,14 @@ def test_exact_conds():
         mf = dft.UKS(mol)
       mf.xc = xc
       mf.kernel()
-      checker = CondChecker(mf, gams)
+      checker = CondChecker(mf, gams=gams)
       check = checker.check_conditions()
 
       all_true = np.all([satisfied for cond, satisfied in check.items()])
       assert all_true
+
+
+if __name__ == '__main__':
+  # for simple debugging
+  test_ec_consistency()
+  test_exact_conds()

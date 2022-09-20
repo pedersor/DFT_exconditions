@@ -12,20 +12,27 @@ from exact_conds import CondChecker
 
 class PyscfEvaluator():
 
-  def __init__(self, xc, scf_args=[{}]):
-    xc = xc.lower()
+  def __init__(self, xc=None, hf=False, scf_args=[{}]):
     self.xc = xc
+    self.hf = hf
     self.scf_args = scf_args
 
     # cached mf objects
     self.mfs = None
+    self.non_scf_mfs = None
 
-    if xc == "ccsd":
-      self.calc = "ccsd"
-    elif xc == 'hf':
-      self.calc = "hf"
+  @property
+  def xc(self):
+    return self._xc
+
+  @xc.setter
+  def xc(self, xc):
+    if xc is None:
+      self._xc = None
     else:
-      self.calc = "ksdft"
+      xc = xc.lower()
+      self._xc = xc
+      self.non_scf_mfs = None
 
   @property
   def scf_args(self):
@@ -47,19 +54,19 @@ class PyscfEvaluator():
   def run(self, system: System):
 
     mol = system.get_pyscf_system()
-    if self.calc == "ksdft":
+    if self.hf:
+      # HF calculation
+      if mol.spin == 0 and mol.charge != -1:
+        mf = scf.RHF(mol)
+      else:
+        mf = scf.UHF(mol)
+    else:
       # KS-DFT calculation
       if mol.spin == 0:
         mf = dft.RKS(mol)
       else:
         mf = dft.UKS(mol)
       mf.xc = self.xc
-    elif self.calc == "hf":
-      # HF calculation
-      if mol.spin == 0:
-        mf = scf.RHF(mol)
-      else:
-        mf = scf.UHF(mol)
 
     # try default scf_args and others
     for scf_args in self.scf_args:
@@ -68,6 +75,19 @@ class PyscfEvaluator():
       if mf.converged:
         break
 
+    return mf
+
+  def run_non_scf(self, system: System, init_dm):
+    mol = system.get_pyscf_system()
+    if mol.spin == 0 and mol.charge != -1:
+      mf = dft.RKS(mol)
+    else:
+      mf = dft.UKS(mol)
+
+    mf.xc = self.xc
+    mf.init_guess = init_dm
+    mf.max_cycle = 0
+    mf.kernel()
     return mf
 
   def _use_scf_args(self, mf, scf_args):
@@ -95,33 +115,37 @@ class PyscfEvaluator():
 
     return
 
-  def reset_mfs(self):
-    self.mfs = None
+  def get_non_scf_mfs(self, entry: Union[Entry, Dict]):
 
-  def evaluate(self, entry: Union[Entry, Dict]):
+    if self.non_scf_mfs is not None:
+      return
 
     self.get_mfs(entry)
 
-    val = entry.get_val(self.mfs)
+    self.non_scf_mfs = []
+    for system, mf in zip(entry.get_systems(), self.mfs):
+      init_dm = mf.make_rdm1()
+      non_scf_mf = self.run_non_scf(system, init_dm)
+      self.non_scf_mfs.append(non_scf_mf)
+
+    return
+
+  def reset_mfs(self):
+    self.mfs = None
+    self.non_scf_mfs = None
+
+  def evaluate(self, entry: Union[Entry, Dict]):
+    val = entry.get_val(self)
     return val
 
   def get_error(self, entry: Union[Entry, Dict]):
     val = self.evaluate(entry)
     return val - entry.get_true_val()
 
-  def exact_cond_checks(
+  def get_exact_cond_checks(
       self,
       entry: Union[Entry, Dict],
       gams=np.linspace(0.01, 2),
   ):
 
-    self.get_mfs(entry)
-
-    sys_checks = []
-    for mf in self.mfs:
-      mf.xc = self.xc
-      checker = CondChecker(mf, gams)
-      checks = checker.check_conditions()
-      sys_checks.append(checks)
-
-    return sys_checks
+    return entry.exact_cond_checks(self, gams, self.xc)

@@ -1,0 +1,318 @@
+---
+# electron affinities from neutral atom to -1 ion
+- name: electron affinity of H
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.0275619777
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: H 0 0 0
+      basis: aug-pcseg-4
+      spin: 1
+  - type: mol
+    kwargs:
+      moldesc: H 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 0
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of He
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: He 0 0 0
+      basis: aug-pcseg-4
+  - type: mol
+    kwargs:
+      moldesc: He 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Li
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.02278456823
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Li 0 0 0
+      basis: aug-pcseg-4
+      spin: 1
+  - type: mol
+    kwargs:
+      moldesc: Li 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Be
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.0
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Be 0 0 0
+      basis: aug-pcseg-4
+  - type: mol
+    kwargs:
+      moldesc: Be 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of B
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.01028980501
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: B 0 0 0
+      basis: aug-pcseg-4
+      spin: 1
+  - type: mol
+    kwargs:
+      moldesc: B 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 2
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of C
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.04630412254
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: C 0 0 0
+      basis: aug-pcseg-4
+      spin: 2
+  - type: mol
+    kwargs:
+      moldesc: C 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 3
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of N
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.0
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: N 0 0 0
+      basis: aug-pcseg-4
+      spin: 3
+  - type: mol
+    kwargs:
+      moldesc: N 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 2
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of O
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.05365398326
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: O 0 0 0
+      basis: aug-pcseg-4
+      spin: 2
+  - type: mol
+    kwargs:
+      moldesc: O 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of F
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.1249476322
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: F 0 0 0
+      basis: aug-pcseg-4
+      spin: 1
+  - type: mol
+    kwargs:
+      moldesc: F 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 0
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Ne
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.0
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Ne 0 0 0
+      basis: aug-pcseg-4
+  - type: mol
+    kwargs:
+      moldesc: Ne 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Na
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.02021211698
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Na 0 0 0
+      basis: aug-pcseg-4
+      spin: 1
+  - type: mol
+    kwargs:
+      moldesc: Na 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Mg
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.0
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Mg 0 0 0
+      basis: aug-pcseg-4
+  - type: mol
+    kwargs:
+      moldesc: Mg 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Al
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.01580220055
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Al 0 0 0
+      basis: aug-pcseg-4
+      spin: 1
+  - type: mol
+    kwargs:
+      moldesc: Al 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 2
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Si
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.051081532
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Si 0 0 0
+      basis: aug-pcseg-4
+      spin: 2
+  - type: mol
+    kwargs:
+      moldesc: Si 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 3
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of P
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.0275619777
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: P 0 0 0
+      basis: aug-pcseg-4
+      spin: 3
+  - type: mol
+    kwargs:
+      moldesc: P 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 2
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of S
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.07643855149
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: S 0 0 0
+      basis: aug-pcseg-4
+      spin: 2
+  - type: mol
+    kwargs:
+      moldesc: S 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Cl
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.132664986
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Cl 0 0 0
+      basis: aug-pcseg-4
+      spin: 1
+  - type: mol
+    kwargs:
+      moldesc: Cl 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 0
+  ref: https://doi.org/10.1021/acs.jctc.6b01249
+
+- name: electron affinity of Ar
+  type: ea
+  dotvec: [1, -1]
+  true_val: 0.0
+  systems:
+  - type: mol
+    kwargs:
+      moldesc: Ar 0 0 0
+      basis: aug-pcseg-4
+  - type: mol
+    kwargs:
+      moldesc: Ar 0 0 0
+      basis: aug-pcseg-4
+      charge: -1
+      spin: 1
+  ref: https://doi.org/10.1021/acs.jctc.6b01249

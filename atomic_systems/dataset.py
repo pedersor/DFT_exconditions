@@ -6,6 +6,8 @@ import numpy as np
 from pyscf import gto, cc, scf
 import pandas as pd
 
+from exact_conds import CondChecker
+
 HAR_TO_EV = 27.2114
 HAR_TO_KCAL = 627.5
 
@@ -94,6 +96,7 @@ class Entry(dict):
       }
       obj = {
           "ie": EntryIE,
+          "ea": EntryEA,
       }[tpe](**kwargs)
       cls.created_entries[s] = obj
     return cls.created_entries[s]
@@ -119,8 +122,9 @@ class EntryIE(Entry):
   def entry_type(self) -> str:
     return "ie"
 
-  def get_val(self, mfs: List):
-    tot_energies = np.array([mf.e_tot for mf in mfs])
+  def get_val(self, evl: 'PyscfEvaluator'):
+    evl.get_mfs(self)
+    tot_energies = np.array([mf.e_tot for mf in evl.mfs])
     ie = np.dot(np.array(self["dotvec"]), tot_energies)
     return ie
 
@@ -128,26 +132,37 @@ class EntryIE(Entry):
     return self["true_val"]
 
 
-if __name__ == '__main__':
-  from evaluator import PyscfEvaluator
+class EntryEA(Entry):
+  """Entry for Electron affinities (EA)"""
 
-  xc = 'M06'
-  dset = Dataset('ie_atoms.yaml')
-  evl = PyscfEvaluator(xc)
+  @property
+  def entry_type(self) -> str:
+    return "ea"
 
-  df = {'label': [], 'error': []}
-  for i in range(len(dset)):
-    curr_calc = dset[i]
-    label = curr_calc["name"].split(' ')[-1]
+  def get_val(self, evl: 'PyscfEvaluator'):
 
-    error = evl.get_error(curr_calc)
+    evl.get_non_scf_mfs(self)
+    tot_energies = np.array([mf.e_tot for mf in evl.non_scf_mfs])
+    ea = np.dot(np.array(self["dotvec"]), tot_energies)
+    return ea
 
-    df['label'].append(label)
-    df['error'].append(error)
+  def get_true_val(self):
+    return self["true_val"]
 
-    evl.reset_mfs()
+  def exact_cond_checks(
+      self,
+      evl: 'PyscfEvaluator',
+      gams,
+      xc,
+  ):
 
-  df = pd.DataFrame.from_dict(df)
-  mae = np.mean(np.abs(df['error'].to_numpy())) * HAR_TO_KCAL
-  print('MAE = ', mae)
-  df.to_csv(f'ie_{xc}.csv', header=False, index=None)
+    evl.get_non_scf_mfs(self)
+
+    sys_checks = []
+    for mf in evl.non_scf_mfs:
+      mf.xc = xc
+      checker = CondChecker(mf, gams=gams)
+      checks = checker.check_conditions()
+      sys_checks.append(checks)
+
+    return sys_checks
