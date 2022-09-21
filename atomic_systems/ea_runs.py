@@ -18,7 +18,7 @@ xcs = {
     'pbe': 'PBE',
     'sogga11': 'SOGGA11',
     'scan': 'SCAN',
-    'r2scan': 'r2SCAN',
+    'r2scan': 'R2SCAN',
     'b3lyp': 'B3LYP',
     'mn15': 'MN15',
     'HYB_GGA_XC_B97': 'B97',
@@ -35,14 +35,14 @@ scf_args = {
 }
 
 all_sys_checks = {}
-all_sys_errors = {'label': []}
+all_sys_errors = {'System': []}
 for i in range(len(dset)):
   print('i = ', i)
   evl = PyscfEvaluator(xc=None, hf=True, scf_args=scf_args)
 
   curr_calc = dset[i]
   label = curr_calc["name"].split(' ')[-1]
-  all_sys_errors['label'].append(label)
+  all_sys_errors['System'].append(label)
   for xc, pretty_xc in xcs.items():
     print('xc = ', xc)
     evl.xc = xc
