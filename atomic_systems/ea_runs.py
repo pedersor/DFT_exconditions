@@ -37,12 +37,14 @@ scf_args = {
 all_sys_checks = {}
 all_sys_errors = {'label': []}
 for i in range(len(dset)):
+  print('i = ', i)
   evl = PyscfEvaluator(xc=None, hf=True, scf_args=scf_args)
 
   curr_calc = dset[i]
   label = curr_calc["name"].split(' ')[-1]
   all_sys_errors['label'].append(label)
   for xc, pretty_xc in xcs.items():
+    print('xc = ', xc)
     evl.xc = xc
     # benchmark errors
     sys_error = evl.get_error(curr_calc)

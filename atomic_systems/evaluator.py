@@ -16,6 +16,8 @@ class PyscfEvaluator():
     self.xc = xc
     self.hf = hf
     self.scf_args = scf_args
+    self.grids_level = 6
+    self.grids_prune = None
 
     # cached mf objects
     self.mfs = None
@@ -67,6 +69,8 @@ class PyscfEvaluator():
       else:
         mf = dft.UKS(mol)
       mf.xc = self.xc
+      mf.grids.level = self.grids_level
+      mf.grids.prune = self.grids_prune
 
     # try default scf_args and others
     for scf_args in self.scf_args:
@@ -84,6 +88,8 @@ class PyscfEvaluator():
     else:
       mf = dft.UKS(mol)
 
+    mf.grids.level = self.grids_level
+    mf.grids.prune = self.grids_prune
     mf.xc = self.xc
     mf.init_guess = init_dm
     mf.max_cycle = 0

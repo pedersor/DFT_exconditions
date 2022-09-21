@@ -38,6 +38,15 @@ class CondChecker():
       rho_dn = numint.eval_rho(self.mol, ao_value, dm_dn, xctype=self.xctype)
       self.rho = (rho_up, rho_dn)
 
+    # caches
+    self._caches = {}
+
+  def get_cache(self, s: str):
+    return self._caches.get(s, None)
+
+  def set_cache(self, s: str, obj) -> None:
+    self._caches[s] = obj
+
   def get_scaled_sys(self, gam):
 
     if not self.unrestricted:
@@ -74,7 +83,16 @@ class CondChecker():
     return ec
 
   def get_Ec_gams(self, gams):
+
+    if self.get_cache('Ec_gams') is not None and np.array_equal(
+        gams, self.gams):
+      return self.get_cache('Ec_gams')
+
     ec_gams = np.array([self.get_Ec_gam(gam) for gam in gams])
+
+    # cache Ec_gams
+    if np.array_equal(gams, self.gams):
+      self.set_cache('Ec_gams', ec_gams)
     return ec_gams
 
   def get_Ex_lda(self, gam):
@@ -96,7 +114,16 @@ class CondChecker():
     return ex
 
   def get_Ex_lda_gams(self, gams):
+
+    if self.get_cache('Ex_lda_gams') is not None and np.array_equal(
+        gams, self.gams):
+      return self.get_cache('Ex_lda_gams')
+
     ex_gams = np.array([self.get_Ex_lda(gam) for gam in gams])
+
+    # cache Ec_gams
+    if np.array_equal(gams, self.gams):
+      self.set_cache('Ex_lda_gams', ex_gams)
     return ex_gams
 
   def get_Exc_gam(self, gam):
@@ -168,16 +195,19 @@ class CondChecker():
 
     ec = self.get_Ec_gam(1)
 
-    gams_s = self.gams[np.where(self.gams < 1, True, False)]
     gams_l = self.gams[np.where(self.gams > 1, True, False)]
 
     # small (s) gam < 1
-    ec_gams_s = self.get_Ec_gams(gams_s)
+    mask_s = np.where(self.gams < 1, True, False)
+    gams_s = self.gams[mask_s]
+    ec_gams_s = self.get_Ec_gams(self.gams)[mask_s]
     cond_s = -tol < gams_s * ec - ec_gams_s
     cond_s = np.all(cond_s)
 
     # large (l) gam > 1
-    ec_gams_l = self.get_Ec_gams(gams_l)
+    mask_l = np.where(self.gams > 1, True, False)
+    gams_l = self.gams[mask_l]
+    ec_gams_l = self.get_Ec_gams(self.gams)[mask_l]
     cond_l = tol > gams_l * ec - ec_gams_l
     cond_l = np.all(cond_l)
 
