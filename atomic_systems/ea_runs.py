@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import pandas as pd
+from collections import defaultdict
 
 from evaluator import PyscfEvaluator
 import dataset
@@ -34,8 +35,8 @@ scf_args = {
     'verbose': 4,
 }
 
-all_sys_checks = {}
-all_sys_errors = {'System': []}
+all_sys_checks = defaultdict(list)
+all_sys_errors = defaultdict(list)
 for i in range(len(dset)):
   print('i = ', i)
   evl = PyscfEvaluator(xc=None, hf=True, scf_args=scf_args)
@@ -48,7 +49,7 @@ for i in range(len(dset)):
     evl.xc = xc
     # benchmark errors
     sys_error = evl.get_error(curr_calc)
-    all_sys_errors.setdefault(pretty_xc, []).append(sys_error)
+    all_sys_errors[pretty_xc].append(sys_error)
 
     # exact condition checks
     sys_checks = evl.get_exact_cond_checks(curr_calc)
