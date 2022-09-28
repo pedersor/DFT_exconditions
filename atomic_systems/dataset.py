@@ -131,6 +131,24 @@ class EntryIE(Entry):
   def get_true_val(self):
     return self["true_val"]
 
+  def exact_cond_checks(
+      self,
+      evl: 'PyscfEvaluator',
+      gams,
+      xc,
+  ):
+
+    evl.get_mfs(self)
+
+    sys_checks = []
+    for mf in evl.mfs:
+      mf.xc = xc
+      checker = CondChecker(mf, gams=gams)
+      checks = checker.check_conditions()
+      sys_checks.append(checks)
+
+    return sys_checks
+
 
 class EntryEA(Entry):
   """Entry for Electron affinities (EA)"""

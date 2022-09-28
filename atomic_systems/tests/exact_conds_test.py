@@ -35,6 +35,7 @@ def test_ec_consistency():
   """
 
   xcs = [
+      ('hyb_mgga_x_m08_hx,mgga_c_m08_hx', 'mgga_c_m08_hx'),
       ('m06', 'mgga_c_m06'),
       ('scan', 'mgga_c_scan'),
       ('pbe', 'gga_c_pbe'),

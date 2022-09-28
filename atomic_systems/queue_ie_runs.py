@@ -8,20 +8,21 @@ import pylibxc
 DEBUG = False
 
 xcs = [
-    'm06',
-    'pbe',
-    'sogga11',
-    'scan',
-    'r2scan',
-    'b3lyp',
-    'mn15',
-    'HYB_GGA_XC_B97',
-    'gga_x_am05,gga_c_am05',
+    'hyb_mgga_x_m08_hx,mgga_c_m08_hx',
+    #'m06',
+    #'pbe',
+    #'sogga11',
+    #'scan',
+    #'r2scan',
+    #'b3lyp',
+    #'mn15',
+    #'HYB_GGA_XC_B97',
+    #'gga_x_am05,gga_c_am05',
     #'HYB_GGA_XC_CASE21',
 ]
 
 # out directory
-out_dir = Path('out')
+out_dir = Path('ie_out')
 out_dir.mkdir(parents=True, exist_ok=True)
 
 # copy over files
