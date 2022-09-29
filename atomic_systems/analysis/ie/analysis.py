@@ -8,8 +8,10 @@ HAR_TO_KCAL = 627.5
 
 out_dir = Path('data/')
 sorted_cols = [
-    'pbe', 'am05', 'scan', 'r2scan', 'b3lyp', 'sogga11', 'm06', 'b97', 'mn15'
+    'pbe', 'am05', 'scan', 'r2scan', 'b3lyp', 'b97', 'm06', 'm08-hx', 'sogga11'
 ]
+sorted_cols = [xc.upper() for xc in sorted_cols]
+drop_cols = ['MN15']
 
 pretty_conds = {
     'ec_non_positivity': '$E_c$ non-positivity',
@@ -31,13 +33,14 @@ def get_ie_err_fig():
       systems = pd.concat([xc_df['label'], pd.Series(['MAE'])])
       errs_df['System'] = systems
 
-    xc = csv.stem.split('_')[-1].lower()
+    xc = csv.stem.split('_')[-1].upper()
     errs = xc_df['error'].abs() * HAR_TO_KCAL
     errs = pd.concat([errs, pd.Series([errs.mean()])])
     errs_df[xc] = errs
 
   errs_df = pd.DataFrame.from_dict(errs_df)
   errs_df = errs_df.set_index('System')
+  errs_df.drop(drop_cols, axis=1, inplace=True)
   errs_df = errs_df.reindex(sorted_cols, axis=1)
 
   ax = plt.axes()
@@ -53,6 +56,7 @@ def get_ie_err_fig():
   ax.set_title('Ionization energies error')
   fig = plot.get_figure()
   fig.savefig('ie_errs.pdf', bbox_inches='tight')
+  plt.close()
 
 
 def exact_cond_checks_fig():
@@ -73,11 +77,12 @@ def exact_cond_checks_fig():
       tot = xc_df[cond].sum()
       cond_totals.append(tot)
 
-    xc = csv.stem.split('_')[-1].lower()
+    xc = csv.stem.split('_')[-1].upper()
     checks_df[xc] = cond_totals
 
   checks_df = pd.DataFrame.from_dict(checks_df)
   checks_df = checks_df.set_index('Exact conds')
+  checks_df.drop(drop_cols, axis=1, inplace=True)
   checks_df = checks_df.rename(pretty_conds, axis='index')
   checks_df = checks_df.reindex(sorted_cols, axis=1)
 
@@ -94,7 +99,9 @@ def exact_cond_checks_fig():
   ax.set_title('Exact conditions')
   fig = plot.get_figure()
   fig.savefig('ie_exact_cond_checks.pdf', bbox_inches='tight')
+  plt.close()
 
 
 if __name__ == '__main__':
+  get_ie_err_fig()
   exact_cond_checks_fig()

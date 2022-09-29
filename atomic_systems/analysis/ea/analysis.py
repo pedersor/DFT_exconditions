@@ -58,6 +58,7 @@ def get_ea_err_fig():
   ax.set_title('Electron affinities error')
   fig = plot.get_figure()
   fig.savefig('ea_errs.pdf', bbox_inches='tight')
+  plt.close()
 
 
 def exact_cond_checks_fig():
@@ -109,6 +110,7 @@ def exact_cond_checks_fig():
   ax.set_title('Exact conditions')
   fig = plot.get_figure()
   fig.savefig('ea_exact_cond_checks.pdf', bbox_inches='tight')
+  plt.close()
 
 
 if __name__ == '__main__':
