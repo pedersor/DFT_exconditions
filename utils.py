@@ -15,7 +15,7 @@ def get_s(n, n_grad):
     n_grad = np.abs(n_grad)
   else:
     n_grad = np.sum(n_grad**2, axis=0)**(1 / 2)
-  return n_grad / (2 * (3 * np.pi)**(1 / 3) * n**(4 / 3))
+  return n_grad / (2 * ((3 * (np.pi**2) * n)**(1 / 3)) * n)
 
 
 def get_grad_n(s, n):

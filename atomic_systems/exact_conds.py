@@ -19,7 +19,19 @@ class CondChecker():
     else:
       self.xc = xc
     self.xctype = libxc.xc_type(self.xc)
-    self.weights = mf.grids.weights
+    if self.xctype == 'HF':
+      # force calculation of higher derivatives on rho (for analysis purposes)
+      self.xctype = 'MGGA'
+
+    if getattr(mf, 'grids', False):
+      mol_grids = mf.grids
+    else:
+      mol_grids = dft.gen_grid.Grids(self.mol)
+      mol_grids.level = 6
+      mol_grids.prune = None
+      mol_grids.build()
+
+    self.weights = mol_grids.weights
     self.nelec = np.array(self.mol.nelec, dtype=np.float64)
 
     if self.mol.spin == 0 and self.mol.charge != -1:
@@ -28,7 +40,7 @@ class CondChecker():
       self.unrestricted = 1
 
     # setup density (rho)
-    ao_value = numint.eval_ao(self.mol, mf.grids.coords, deriv=2)
+    ao_value = numint.eval_ao(self.mol, mol_grids.coords, deriv=2)
     if not self.unrestricted:
       dm = mf.make_rdm1()
       self.rho = numint.eval_rho(self.mol, ao_value, dm, xctype=self.xctype)
@@ -46,6 +58,55 @@ class CondChecker():
 
   def set_cache(self, s: str, obj) -> None:
     self._caches[s] = obj
+
+  def get_reduced_grad(self):
+    """ Obtain reduced gradient: s(r). """
+
+    rho = self.rho
+    if self.unrestricted:
+      # get total density
+      rho = sum(rho)
+
+    n = rho[0]
+    n_grad = rho[1:4]
+    abs_n_grad = np.sum(n_grad**2, axis=0)**(1 / 2)
+
+    s = abs_n_grad / (2 * ((3 * (np.pi**2) * n)**(1 / 3)) * n)
+    return s
+
+  def reduced_grad_dist(
+      self,
+      s_grids=np.linspace(0, 3, num=1000),
+      fermi_temp=0.03,
+  ):
+    """ Obtain distribution of the reduced gradient, g_3(s) as defined in:
+    
+    Zupan, Ales, et al. "Density‐gradient analysis for density functional 
+    theory: Application to atoms." International journal of quantum chemistry 
+    61.5 (1997): 835-845.
+
+    https://doi.org/10.1002/(SICI)1097-461X(1997)61:5<835::AID-QUA9>3.0.CO;2-X
+    
+    """
+
+    rho = self.rho
+    if self.unrestricted:
+      # get total density
+      rho = sum(rho)
+
+    s_grids = np.expand_dims(s_grids, axis=1)
+    s = self.get_reduced_grad()
+
+    fermi_dist = 1 / (np.exp(-(s_grids - s) / fermi_temp) + 1)
+
+    n = rho[0]
+    integrand = np.nan_to_num(n * fermi_dist * self.weights)
+    int_g3_s = np.sum(integrand, axis=1)
+
+    s_grids = np.squeeze(s_grids, axis=1)
+    g3_s = self.deriv_fn(int_g3_s, s_grids)
+
+    return s_grids, g3_s
 
   def get_scaled_sys(self, gam):
 
@@ -66,6 +127,7 @@ class CondChecker():
   def get_scaled_rho(rho, gam):
     """ Scale density: \gamma^3 n(\gamma \br) ."""
 
+    # create a copy to prevent modifying the original density
     scaled_rho = copy.deepcopy(rho)
     scaled_rho[0] = (gam**3) * scaled_rho[0]
     scaled_rho[1:4] = (gam**4) * scaled_rho[1:4]
