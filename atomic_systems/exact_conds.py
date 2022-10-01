@@ -77,7 +77,8 @@ class CondChecker():
   def reduced_grad_dist(
       self,
       s_grids=np.linspace(0, 3, num=1000),
-      fermi_temp=0.03,
+      fermi_temp=0.05,
+      density_tol=1e-6,
   ):
     """ Obtain distribution of the reduced gradient, g_3(s) as defined in:
     
@@ -94,13 +95,19 @@ class CondChecker():
       # get total density
       rho = sum(rho)
 
+    n = rho[0]
     s_grids = np.expand_dims(s_grids, axis=1)
     s = self.get_reduced_grad()
 
+    # avoid numerical problems
+    mask = n > density_tol
+    n = n[mask]
+    s = s[mask]
+    weights = self.weights[mask]
+
     fermi_dist = 1 / (np.exp(-(s_grids - s) / fermi_temp) + 1)
 
-    n = rho[0]
-    integrand = np.nan_to_num(n * fermi_dist * self.weights)
+    integrand = np.nan_to_num(n * fermi_dist * weights)
     int_g3_s = np.sum(integrand, axis=1)
 
     s_grids = np.squeeze(s_grids, axis=1)
