@@ -1,7 +1,8 @@
 import sys
 import functools
 
-sys.path.append('../')
+sys.path.append('../../')
+sys.path.append('../../../')
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -198,16 +199,16 @@ class GedankenDensity():
 
 class OtherExamples():
 
-  def li_mol_g3_s():
+  def li_atom_g3_s():
 
-    li_mol = gto.M(
+    li_atom = gto.M(
         atom='Li 0 0 0',
         basis='aug-pcseg-4',
         spin=1,
         verbose=4,
     )
 
-    mf = scf.UHF(li_mol)
+    mf = scf.UHF(li_atom)
     mf.conv_tol_grad = 1e-9
     mf.kernel()
 
@@ -218,7 +219,25 @@ class OtherExamples():
     plt.plot(s_grids, g3_s)
     plt.savefig('g3_s_li_atom.pdf', bbox_inches='tight')
 
+  def ar_atom_g3_s():
+    ar_atom = gto.M(
+        atom='Ar 0 0 0',
+        basis='aug-pcseg-4',
+        verbose=4,
+    )
+
+    mf = scf.RHF(ar_atom)
+    mf.conv_tol_grad = 1e-9
+    mf.kernel()
+
+    checker = CondChecker(mf, xc='HF')
+
+    s_grids, g3_s = checker.reduced_grad_dist()
+
+    plt.plot(s_grids, g3_s)
+    plt.savefig('g3_s_ar_atom.pdf', bbox_inches='tight')
+
 
 if __name__ == '__main__':
-  GedankenDensity.run_example()
-  #OtherExamples.li_mol_g3_s()
+  #GedankenDensity.run_example()
+  OtherExamples.ar_atom_g3_s()
