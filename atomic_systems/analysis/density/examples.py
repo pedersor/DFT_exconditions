@@ -16,53 +16,51 @@ import utils
 pi = np.pi
 
 
-def radial_reduced_grad_dist(
-    grids,
-    n,
-    n_grad,
-    s_grids=np.linspace(0, 3, num=1000),
-    fermi_temp=0.05,
-    density_tol=1e-6,
-):
-  """ Obtain distribution of the reduced gradient, g_3(s) as defined in:
-    
-    Zupan, Ales, et al. "Density-gradient analysis for density functional 
-    theory: Application to atoms." International journal of quantum chemistry 
-    61.5 (1997): 835-845.
-
-    https://doi.org/10.1002/(SICI)1097-461X(1997)61:5<835::AID-QUA9>3.0.CO;2-X
-    
-    """
-
-  dx = (grids[-1] - grids[0]) / (len(grids) - 1)
-  s_grids = np.expand_dims(s_grids, axis=1)
-  s = utils.get_s(n, n_grad)
-
-  # avoid numerical problems
-  mask = n > density_tol
-  n = n[mask]
-  s = s[mask]
-  grids = grids[mask]
-
-  fermi_dist = 1 / (np.exp(-(s_grids - s) / fermi_temp) + 1)
-
-  integrand = 4 * np.pi * grids**2 * np.nan_to_num(n * fermi_dist) * dx
-  int_g3_s = np.sum(integrand, axis=1)
-
-  s_grids = np.squeeze(s_grids, axis=1)
-  g3_s = num_deriv_fn(int_g3_s, s_grids)
-
-  return s_grids, g3_s
-
-
-def num_deriv_fn(arr, grids):
-  """ Numerical 1st derivative of arr on grids."""
-  dx = (grids[-1] - grids[0]) / (len(grids) - 1)
-  deriv = np.gradient(arr, dx, edge_order=2, axis=0)
-  return deriv
-
-
 class GedankenDensity():
+
+  def radial_reduced_grad_dist(
+      grids,
+      n,
+      n_grad,
+      s_grids=np.linspace(0, 3, num=1000),
+      fermi_temp=0.05,
+      density_tol=1e-6,
+  ):
+    """ Obtain distribution of the reduced gradient, g_3(s) as defined in:
+      
+      Zupan, Ales, et al. "Density-gradient analysis for density functional 
+      theory: Application to atoms." International journal of quantum chemistry 
+      61.5 (1997): 835-845.
+
+      https://doi.org/10.1002/(SICI)1097-461X(1997)61:5<835::AID-QUA9>3.0.CO;2-X
+      
+      """
+
+    dx = (grids[-1] - grids[0]) / (len(grids) - 1)
+    s_grids = np.expand_dims(s_grids, axis=1)
+    s = utils.get_s(n, n_grad)
+
+    # avoid numerical problems
+    mask = n > density_tol
+    n = n[mask]
+    s = s[mask]
+    grids = grids[mask]
+
+    fermi_dist = 1 / (np.exp(-(s_grids - s) / fermi_temp) + 1)
+
+    integrand = 4 * np.pi * grids**2 * np.nan_to_num(n * fermi_dist) * dx
+    int_g3_s = np.sum(integrand, axis=1)
+
+    s_grids = np.squeeze(s_grids, axis=1)
+    g3_s = GedankenDensity.num_deriv_fn(int_g3_s, s_grids)
+
+    return s_grids, g3_s
+
+  def num_deriv_fn(arr, grids):
+    """ Numerical 1st derivative of arr on grids."""
+    dx = (grids[-1] - grids[0]) / (len(grids) - 1)
+    deriv = np.gradient(arr, dx, edge_order=2, axis=0)
+    return deriv
 
   def decay_tail(grids, b, x, y, y_prime):
     """ decay tail f(x) = A x^b e^(-kx) with f(x) = y and f'(x) = y' """
@@ -73,7 +71,7 @@ class GedankenDensity():
     return A * grids**b * np.exp(-k * grids)
 
   @staticmethod
-  def monster(
+  def gedanken_density(
       gamma,
       r_s_min,
       r_s_max,
@@ -173,8 +171,8 @@ class GedankenDensity():
 
     return E_c_gam, int_check
 
-  def run_example():
-    density = functools.partial(GedankenDensity.monster,
+  def gedanken_g3_s():
+    density = functools.partial(GedankenDensity.gedanken_density,
                                 r_s_min=1.5,
                                 r_s_max=2,
                                 s_target=2,
@@ -183,21 +181,40 @@ class GedankenDensity():
 
     grids, n_m, n_m_grad = density(gamma=1)
 
-    s_grids, g3_s = radial_reduced_grad_dist(
+    s_grids, g3_s = GedankenDensity.radial_reduced_grad_dist(
         grids,
         n_m,
         n_m_grad,
         s_grids=np.linspace(0, 5, num=1000),
     )
 
-    plt.plot(s_grids, g3_s, label='$g_3(s)$')
+    return s_grids, g3_s
 
-    plt.xlabel('$s$')
-    plt.legend(loc='lower right')
-    plt.savefig(f'g3_s_gedanken.pdf', bbox_inches='tight')
+  def plot_gedanken_density():
+
+    density = functools.partial(GedankenDensity.gedanken_density,
+                                r_s_min=1.5,
+                                r_s_max=2,
+                                s_target=2,
+                                num_peaks=5,
+                                smoothing_factor=0.05)
+
+    grids, n_g, n_g_grad = density(gamma=1)
+
+    utils.use_standard_plotting_params()
+    plt.plot(grids, n_g, label='gedanken density')
+    plt.ylabel('$n(r)$')
+    plt.xlabel('$r$')
+    plt.ylim(0, .1)
+    plt.xlim(left=0, right=3)
+    plt.legend(loc='upper right')
+    plt.savefig('gedanken_density.pdf', bbox_inches='tight')
+    plt.close()
 
 
-class OtherExamples():
+class Examples():
+
+  s_grids = np.linspace(0, 5, num=1000)
 
   def li_atom_g3_s():
 
@@ -214,10 +231,28 @@ class OtherExamples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g3_s = checker.reduced_grad_dist()
+    s_grids, g3_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
 
-    plt.plot(s_grids, g3_s)
-    plt.savefig('g3_s_li_atom.pdf', bbox_inches='tight')
+    return s_grids, g3_s
+
+  def n_atom_g3_s():
+
+    n_atom = gto.M(
+        atom='N 0 0 0',
+        basis='aug-pcseg-4',
+        spin=3,
+        verbose=4,
+    )
+
+    mf = scf.UHF(n_atom)
+    mf.conv_tol_grad = 1e-9
+    mf.kernel()
+
+    checker = CondChecker(mf, xc='HF')
+
+    s_grids, g3_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+
+    return s_grids, g3_s
 
   def ar_atom_g3_s():
     ar_atom = gto.M(
@@ -232,12 +267,38 @@ class OtherExamples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g3_s = checker.reduced_grad_dist()
+    s_grids, g3_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
 
-    plt.plot(s_grids, g3_s)
-    plt.savefig('g3_s_ar_atom.pdf', bbox_inches='tight')
+    return s_grids, g3_s
+
+  def combined_examples():
+
+    n_out = Examples.n_atom_g3_s()
+    ar_out = Examples.ar_atom_g3_s()
+    gedanken_out = GedankenDensity.gedanken_g3_s()
+
+    # normalize g3_s across different systems
+    n_out = (n_out[0], n_out[1] / np.max(n_out[1]))
+    ar_out = (ar_out[0], ar_out[1] / np.max(ar_out[1]))
+    gedanken_out = (gedanken_out[0], gedanken_out[1] / np.max(gedanken_out[1]))
+
+    s_min = np.min([n_out[0], ar_out[0], gedanken_out[0]])
+    s_max = np.max([n_out[0], ar_out[0], gedanken_out[0]])
+
+    plt.plot(*gedanken_out, label='gedanken')
+    plt.plot(*n_out, label='N atom')
+    plt.plot(*ar_out, label='Ar atom')
+
+    utils.use_standard_plotting_params()
+    plt.legend(loc='upper right')
+    plt.xlim(left=s_min, right=s_max)
+    plt.ylim(bottom=0, top=1.2)
+    plt.ylabel('$g_3(s)$')
+    plt.xlabel('$s$')
+    plt.savefig('g3_s_combined.pdf', bbox_inches='tight')
+    plt.close()
 
 
 if __name__ == '__main__':
-  #GedankenDensity.run_example()
-  OtherExamples.ar_atom_g3_s()
+  GedankenDensity.plot_gedanken_density()
+  Examples.combined_examples()
