@@ -4,13 +4,13 @@ import functools
 sys.path.append('../../')
 sys.path.append('../../../')
 
+import pylibxc
 import matplotlib.pyplot as plt
 import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
 
 from exact_conds import CondChecker
-
 import utils
 
 pi = np.pi
@@ -62,15 +62,6 @@ class GedankenDensity():
     deriv = np.gradient(arr, dx, edge_order=2, axis=0)
     return deriv
 
-  def decay_tail(grids, b, x, y, y_prime):
-    """ decay tail f(x) = A x^b e^(-kx) with f(x) = y and f'(x) = y' """
-
-    k = ((-y_prime * x / y) + b) / x
-    A = y / (x**b * np.exp(-k * x))
-
-    return A * grids**b * np.exp(-k * grids)
-
-  @staticmethod
   def gedanken_density(
       gamma,
       r_s_min,
@@ -96,6 +87,7 @@ class GedankenDensity():
     grids_1 = np.linspace(0, osc_len, base_grid_pts)
 
     def osc_density(grids, offset, amp, a, period):
+      """ Oscillatory region of the density. """
 
       theta = (1 / period) * 2 * pi * (grids + (period / 4))
 
@@ -130,46 +122,51 @@ class GedankenDensity():
                                   y=n_osc[-1],
                                   y_prime=-grad_n)
 
-    n_m = np.concatenate((n_osc, tail[1:]), axis=0)
-    n_m_grad = np.concatenate((grad_n_osc, tail_deriv[1:]), axis=0)
+    n_g = np.concatenate((n_osc, tail[1:]), axis=0)
+    n_g_grad = np.concatenate((grad_n_osc, tail_deriv[1:]), axis=0)
 
     grids = np.concatenate((grids_1, grids_2[1:]), axis=0)
 
     # easy rescaling
     grids /= gamma
-    n_m *= gamma**3
-    n_m_grad *= gamma**4
+    n_g *= gamma**3
+    n_g_grad *= gamma**4
 
-    return grids, n_m, n_m_grad
+    return grids, n_g, n_g_grad
 
-  def get_eps_c(func_c, gamma, density):
+  def default_gedanken_density():
+    """ Default gedanken density parameters. 
+  
+    Returns: callable gedanken density (gamma).
+    """
+    density = functools.partial(
+        GedankenDensity.gedanken_density,
+        r_s_min=1.5,
+        r_s_max=2,
+        s_target=2,
+        num_peaks=5,
+        smoothing_factor=0.05,
+    )
+    return density
 
-    grids, n_m, n_m_grad = density(gamma=gamma)
+  def get_e_xc(xc, gamma):
+    """ Return E_xc[n^gedanken_\gamma] for a given XC functional. """
 
+    gdn_density = GedankenDensity.default_gedanken_density()
+    grids, n_g, n_g_grad = gdn_density(gamma=gamma)
+
+    func = pylibxc.LibXCFunctional(xc, "unpolarized")
     inp = {}
-    inp["rho"] = n_m
-    inp["sigma"] = n_m_grad**2
+    inp["rho"] = n_g
+    inp["sigma"] = n_g_grad**2
+    eps_xc = func.compute(inp)
+    eps_xc = np.squeeze(eps_xc['zk'])
 
-    func_c_res = func_c.compute(inp)
-    eps_c = np.squeeze(func_c_res['zk'])
+    # check normalization
+    int_check = 4 * pi * np.trapz(n_g * (grids**2), grids)
+    e_xc = 4 * pi * np.trapz(eps_xc * n_g * (grids**2), grids)
 
-    return eps_c
-
-  def get_E_c_gam(func_c, gamma, density):
-
-    grids, n_m, n_m_grad = density(gamma=gamma)
-
-    inp = {}
-    inp["rho"] = n_m
-    inp["sigma"] = n_m_grad**2
-
-    func_c_res = func_c.compute(inp)
-    eps_c = np.squeeze(func_c_res['zk'])
-
-    int_check = 4 * pi * np.trapz(n_m * (grids**2), grids)
-    E_c_gam = 4 * pi * np.trapz(eps_c * n_m * (grids**2), grids)
-
-    return E_c_gam, int_check
+    return e_xc
 
   def gedanken_g3_s():
     density = functools.partial(GedankenDensity.gedanken_density,
@@ -179,12 +176,12 @@ class GedankenDensity():
                                 num_peaks=5,
                                 smoothing_factor=0.05)
 
-    grids, n_m, n_m_grad = density(gamma=1)
+    grids, n_g, n_g_grad = density(gamma=1)
 
     s_grids, g3_s = GedankenDensity.radial_reduced_grad_dist(
         grids,
-        n_m,
-        n_m_grad,
+        n_g,
+        n_g_grad,
         s_grids=np.linspace(0, 5, num=1000),
     )
 
@@ -300,5 +297,9 @@ class Examples():
 
 
 if __name__ == '__main__':
+  """ Obtain plots and results for the paper. """
+
+  e_c_gdn_density_lyp = GedankenDensity.get_e_xc('gga_c_lyp', gamma=1)
+  print(f'E_c[n^gedanken] = {e_c_gdn_density_lyp}')
   GedankenDensity.plot_gedanken_density()
   Examples.combined_examples()
