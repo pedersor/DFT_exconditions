@@ -26,7 +26,7 @@ class GedankenDensity():
       fermi_temp=0.05,
       density_tol=1e-6,
   ):
-    """ Obtain distribution of the reduced gradient, g_3(s) as defined in:
+    """ Obtain distribution of the reduced gradient, g(s) as defined in:
       
       Zupan, Ales, et al. "Density-gradient analysis for density functional 
       theory: Application to atoms." International journal of quantum chemistry 
@@ -49,12 +49,12 @@ class GedankenDensity():
     fermi_dist = 1 / (np.exp(-(s_grids - s) / fermi_temp) + 1)
 
     integrand = 4 * np.pi * grids**2 * np.nan_to_num(n * fermi_dist) * dx
-    int_g3_s = np.sum(integrand, axis=1)
+    int_g_s = np.sum(integrand, axis=1)
 
     s_grids = np.squeeze(s_grids, axis=1)
-    g3_s = GedankenDensity.num_deriv_fn(int_g3_s, s_grids)
+    g_s = GedankenDensity.num_deriv_fn(int_g_s, s_grids)
 
-    return s_grids, g3_s
+    return s_grids, g_s
 
   def num_deriv_fn(arr, grids):
     """ Numerical 1st derivative of arr on grids."""
@@ -174,7 +174,7 @@ class GedankenDensity():
 
     return e_xc
 
-  def gedanken_g3_s():
+  def gedanken_g_s():
     density = functools.partial(GedankenDensity.gedanken_density,
                                 r_s_min=1.5,
                                 r_s_max=2,
@@ -184,14 +184,14 @@ class GedankenDensity():
 
     grids, n_g, n_g_grad = density(gamma=1)
 
-    s_grids, g3_s = GedankenDensity.radial_reduced_grad_dist(
+    s_grids, g_s = GedankenDensity.radial_reduced_grad_dist(
         grids,
         n_g,
         n_g_grad,
         s_grids=np.linspace(0, 5, num=1000),
     )
 
-    return s_grids, g3_s
+    return s_grids, g_s
 
   def plot_gedanken_density():
 
@@ -219,7 +219,7 @@ class Examples():
 
   s_grids = np.linspace(0, 5, num=1000)
 
-  def li_atom_g3_s():
+  def li_atom_g_s():
 
     li_atom = gto.M(
         atom='Li 0 0 0',
@@ -234,11 +234,11 @@ class Examples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g3_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
 
-    return s_grids, g3_s
+    return s_grids, g_s
 
-  def n_atom_g3_s():
+  def n_atom_g_s():
 
     n_atom = gto.M(
         atom='N 0 0 0',
@@ -253,11 +253,11 @@ class Examples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g3_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
 
-    return s_grids, g3_s
+    return s_grids, g_s
 
-  def ar_atom_g3_s():
+  def ar_atom_g_s():
     ar_atom = gto.M(
         atom='Ar 0 0 0',
         basis='aug-pcseg-4',
@@ -270,20 +270,20 @@ class Examples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g3_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
 
-    return s_grids, g3_s
+    return s_grids, g_s
 
   def combined_examples():
 
-    n_out = Examples.n_atom_g3_s()
-    ar_out = Examples.ar_atom_g3_s()
-    gedanken_out = GedankenDensity.gedanken_g3_s()
+    n_out = Examples.n_atom_g_s()
+    ar_out = Examples.ar_atom_g_s()
+    gedanken_out = GedankenDensity.gedanken_g_s()
 
-    # normalize g3_s across different systems
-    n_out = (n_out[0], n_out[1] / np.max(n_out[1]))
-    ar_out = (ar_out[0], ar_out[1] / np.max(ar_out[1]))
-    gedanken_out = (gedanken_out[0], gedanken_out[1] / np.max(gedanken_out[1]))
+    # normalize g_s across different systems
+    n_out = (n_out[0], n_out[1] / 7)
+    ar_out = (ar_out[0], ar_out[1] / 18)
+    gedanken_out = (gedanken_out[0], gedanken_out[1] / 1)
 
     s_min = np.min([n_out[0], ar_out[0], gedanken_out[0]])
     s_max = np.max([n_out[0], ar_out[0], gedanken_out[0]])
@@ -295,10 +295,10 @@ class Examples():
     utils.use_standard_plotting_params()
     plt.legend(loc='upper right')
     plt.xlim(left=s_min, right=s_max)
-    plt.ylim(bottom=0, top=1.2)
-    plt.ylabel('$g_3(s)$')
+    plt.ylim(bottom=0)
+    plt.ylabel('$g(s) / N$')
     plt.xlabel('$s$')
-    plt.savefig('g3_s_combined.pdf', bbox_inches='tight')
+    plt.savefig('g_s_combined.pdf', bbox_inches='tight')
     plt.close()
 
 

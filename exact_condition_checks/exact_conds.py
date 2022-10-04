@@ -78,7 +78,7 @@ class CondChecker():
       self,
       s_grids=np.linspace(0, 3, num=1000),
       fermi_temp=0.05,
-      density_tol=1e-6,
+      density_tol=1e-9,
   ):
     """ Obtain distribution of the reduced gradient, g_3(s) as defined in:
     
