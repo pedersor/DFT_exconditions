@@ -21,6 +21,7 @@ pretty_conds = {
     'adiabatic_ec_concavity': '$E^{\lambda}_c[n]$ concavity',
     'lieb_oxford_bound_exc': r'Lieb-Oxford bound on $E_{xc}$',
     'lieb_oxford_bound_uxc': r'Lieb-Oxford bound on $U_{xc}$',
+    'tc_ec_conjecture': r'Conjecture: $T_c \leq -E_c$',
 }
 
 

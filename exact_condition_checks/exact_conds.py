@@ -368,6 +368,16 @@ class CondChecker():
 
     return cond
 
+  def tc_ec_conjecture(self, tol=5e-6):
+    """ Check the conjecture: T_c[n] <= -E_c[n] ."""
+
+    ec_gams = self.get_Ec_gams(self.gams)
+    ec_deriv = self.deriv_fn(ec_gams, self.gams)
+    tc_gams = self.gams * ec_deriv - ec_gams
+
+    cond = np.all(tc_gams + ec_gams <= tol)
+    return cond
+
   def check_conditions(self, conds_str_list=None):
     """ Check several different exact conditions."""
 
@@ -380,6 +390,7 @@ class CondChecker():
         'adiabatic_ec_concavity': self.adiabatic_ec_concavity,
         'lieb_oxford_bound_exc': self.lieb_oxford_bound_exc,
         'lieb_oxford_bound_uxc': self.lieb_oxford_bound_uxc,
+        'tc_ec_conjecture': self.tc_ec_conjecture,
     }
 
     # run all checks

@@ -9,15 +9,15 @@ DEBUG = False
 
 xcs = [
     'hyb_mgga_x_m08_hx,mgga_c_m08_hx',
-    #'m06',
-    #'pbe',
-    #'sogga11',
-    #'scan',
-    #'r2scan',
-    #'b3lyp',
-    #'mn15',
-    #'HYB_GGA_XC_B97',
-    #'gga_x_am05,gga_c_am05',
+    'm06',
+    'pbe',
+    'sogga11',
+    'scan',
+    'r2scan',
+    'b3lyp',
+    'mn15',
+    'HYB_GGA_XC_B97',
+    'gga_x_am05,gga_c_am05',
     #'HYB_GGA_XC_CASE21',
 ]
 
