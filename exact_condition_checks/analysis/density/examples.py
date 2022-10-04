@@ -70,6 +70,7 @@ class GedankenDensity():
       num_peaks,
       smoothing_factor,
       base_grid_pts=1000,
+      num_elec=1,
   ):
 
     n_max = utils.get_density(r_s_min)
@@ -131,6 +132,11 @@ class GedankenDensity():
     grids /= gamma
     n_g *= gamma**3
     n_g_grad *= gamma**4
+
+    # normalize to num_elec
+    norm = 4 * pi * np.trapz(n_g * (grids**2), grids)
+    n_g *= num_elec / norm
+    n_g_grad *= num_elec / norm
 
     return grids, n_g, n_g_grad
 
