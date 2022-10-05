@@ -257,6 +257,24 @@ class Examples():
 
     return s_grids, g_s
 
+  def n2_mol_g_s():
+
+    n2_mol = gto.M(
+        atom='N 0 0 0;N 0 0 1.09',
+        basis='aug-pcseg-4',
+        verbose=4,
+    )
+
+    mf = scf.RHF(n2_mol)
+    mf.conv_tol_grad = 1e-9
+    mf.kernel()
+
+    checker = CondChecker(mf, xc='HF')
+
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+
+    return s_grids, g_s
+
   def ar_atom_g_s():
     ar_atom = gto.M(
         atom='Ar 0 0 0',
@@ -278,10 +296,12 @@ class Examples():
 
     n_out = Examples.n_atom_g_s()
     ar_out = Examples.ar_atom_g_s()
+    n2_out = Examples.n2_mol_g_s()
     gedanken_out = GedankenDensity.gedanken_g_s()
 
     # normalize g_s across different systems
     n_out = (n_out[0], n_out[1] / 7)
+    n2_out = (n2_out[0], n2_out[1] / 14)
     ar_out = (ar_out[0], ar_out[1] / 18)
     gedanken_out = (gedanken_out[0], gedanken_out[1] / 1)
 
@@ -291,6 +311,7 @@ class Examples():
     plt.plot(*gedanken_out, label='gedanken')
     plt.plot(*n_out, label='N atom')
     plt.plot(*ar_out, label='Ar atom')
+    plt.plot(*n2_out, label='N$_2$ molecule')
 
     utils.use_standard_plotting_params()
     plt.legend(loc='upper right')
