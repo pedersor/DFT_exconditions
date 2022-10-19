@@ -197,7 +197,6 @@ class GedankenDensity():
     # plot HF-calculated He density for reference
     he_grids, he_density = Examples.he_atom_radial_density()
 
-    utils.use_standard_plotting_params()
     plt.plot(grids, n_g, label='gedanken density', zorder=2)
     plt.plot(he_grids, he_density / 7, label='He density / 7')
     plt.ylabel('$n(r)$')
@@ -260,6 +259,16 @@ class Examples():
     mf.conv_tol_grad = 1e-9
     mf.kernel()
 
+    n_ang_grids = dft.gen_grid._default_ang(nuc=2, level=9)
+    n_rad_grids = 300
+
+    grids = dft.gen_grid.Grids(atom)
+    grids.atom_grid = {'He': (n_rad_grids, n_ang_grids)}
+    grids.prune = None
+    grids.build()
+
+    mf.grids = grids
+
     checker = CondChecker(mf, xc='HF')
 
     s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
@@ -278,6 +287,13 @@ class Examples():
     mf = scf.UHF(n_atom)
     mf.conv_tol_grad = 1e-9
     mf.kernel()
+
+    grids = dft.gen_grid.Grids(n_atom)
+    grids.level = 9
+    grids.prune = None
+    grids.build()
+
+    mf.grids = grids
 
     checker = CondChecker(mf, xc='HF')
 
@@ -341,7 +357,6 @@ class Examples():
     plt.plot(*n_out, label='N atom')
     plt.plot(*n2_out, label='N$_2$ molecule')
 
-    utils.use_standard_plotting_params()
     plt.legend(loc='upper right')
     plt.xlim(left=s_min, right=s_max)
     plt.ylim(bottom=0)
@@ -354,6 +369,7 @@ class Examples():
 if __name__ == '__main__':
   """ Obtain plots and results for the paper. """
 
+  utils.use_standard_plotting_params()
   e_c_gdn_density_lyp = GedankenDensity.get_e_xc('gga_c_lyp', gamma=1)
   print(f'E^LYP_c[n^gedanken] = {e_c_gdn_density_lyp}')
   e_c_gdn_density_pbe = GedankenDensity.get_e_xc('gga_c_pbe', gamma=1)
