@@ -70,7 +70,7 @@ class GedankenDensity():
       num_peaks,
       smoothing_factor,
       base_grid_pts=1000,
-      num_elec=1,
+      num_elec=2,
   ):
 
     n_max = utils.get_density(r_s_min)
@@ -147,9 +147,9 @@ class GedankenDensity():
     """
     density = functools.partial(
         GedankenDensity.gedanken_density,
-        r_s_min=1.5,
-        r_s_max=2,
-        s_target=2,
+        r_s_min=1,
+        r_s_max=1.5,
+        s_target=2.5,
         num_peaks=5,
         smoothing_factor=0.05,
     )
@@ -175,12 +175,7 @@ class GedankenDensity():
     return e_xc
 
   def gedanken_g_s():
-    density = functools.partial(GedankenDensity.gedanken_density,
-                                r_s_min=1.5,
-                                r_s_max=2,
-                                s_target=2,
-                                num_peaks=5,
-                                smoothing_factor=0.05)
+    density = GedankenDensity.default_gedanken_density()
 
     grids, n_g, n_g_grad = density(gamma=1)
 
@@ -195,12 +190,7 @@ class GedankenDensity():
 
   def plot_gedanken_density():
 
-    density = functools.partial(GedankenDensity.gedanken_density,
-                                r_s_min=1.5,
-                                r_s_max=2,
-                                s_target=2,
-                                num_peaks=5,
-                                smoothing_factor=0.05)
+    density = GedankenDensity.default_gedanken_density()
 
     grids, n_g, n_g_grad = density(gamma=1)
 
@@ -208,8 +198,8 @@ class GedankenDensity():
     plt.plot(grids, n_g, label='gedanken density')
     plt.ylabel('$n(r)$')
     plt.xlabel('$r$')
-    plt.ylim(0, .1)
-    plt.xlim(left=0, right=3)
+    plt.ylim(0, .5)
+    plt.xlim(left=0, right=2.5)
     plt.legend(loc='upper right')
     plt.savefig('gedanken_density.pdf', bbox_inches='tight')
     plt.close()
