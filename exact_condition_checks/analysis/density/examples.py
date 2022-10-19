@@ -149,7 +149,7 @@ class GedankenDensity():
         GedankenDensity.gedanken_density,
         r_s_min=1,
         r_s_max=1.5,
-        s_target=2.5,
+        s_target=2,
         num_peaks=5,
         smoothing_factor=0.05,
     )
@@ -190,15 +190,19 @@ class GedankenDensity():
 
   def plot_gedanken_density():
 
+    # plot gedanken density
     density = GedankenDensity.default_gedanken_density()
-
     grids, n_g, n_g_grad = density(gamma=1)
 
+    # plot HF-calculated He density for reference
+    he_grids, he_density = Examples.he_atom_radial_density()
+
     utils.use_standard_plotting_params()
-    plt.plot(grids, n_g, label='gedanken density')
+    plt.plot(grids, n_g, label='gedanken density', zorder=2)
+    plt.plot(he_grids, he_density / 7, label='He density / 7')
     plt.ylabel('$n(r)$')
     plt.xlabel('$r$')
-    plt.ylim(0, .5)
+    plt.ylim(bottom=0)
     plt.xlim(left=0, right=2.5)
     plt.legend(loc='upper right')
     plt.savefig('gedanken_density.pdf', bbox_inches='tight')
@@ -209,16 +213,50 @@ class Examples():
 
   s_grids = np.linspace(0, 5, num=1000)
 
-  def li_atom_g_s():
-
-    li_atom = gto.M(
-        atom='Li 0 0 0',
+  def he_atom_radial_density():
+    atom = gto.M(
+        atom='He 0 0 0',
         basis='aug-pcseg-4',
-        spin=1,
+        spin=0,
         verbose=4,
     )
 
-    mf = scf.UHF(li_atom)
+    mf = scf.RHF(atom)
+    mf.conv_tol_grad = 1e-9
+    mf.kernel()
+
+    grids = dft.gen_grid.Grids(atom)
+    grids.level = 3
+    grids.prune = None
+    grids.build()
+    '''
+    # obtain radi from centered atomic coordinates
+    radi = np.sqrt(np.sum(grids.coords**2, axis=1))
+    # round values to prevent duplicates due to numerical precision
+    radi, mask = np.unique(np.around(radi, decimals=10), return_index=True)
+    '''
+
+    num_radial_pts = 500
+    radial_grids = np.linspace(1e-5, 2.5, num_radial_pts)
+    radi_coords = np.expand_dims(radial_grids, axis=1)
+    radi_coords = np.append(radi_coords, np.zeros((num_radial_pts, 2)), axis=1)
+
+    ao_value = numint.eval_ao(atom, radi_coords, deriv=0)
+    dm = mf.make_rdm1()
+    radial_density = numint.eval_rho(atom, ao_value, dm, xctype='HF')
+
+    return radial_grids, radial_density
+
+  def he_atom_g_s():
+
+    atom = gto.M(
+        atom='He 0 0 0',
+        basis='aug-pcseg-4',
+        spin=0,
+        verbose=4,
+    )
+
+    mf = scf.RHF(atom)
     mf.conv_tol_grad = 1e-9
     mf.kernel()
 
@@ -285,22 +323,22 @@ class Examples():
   def combined_examples():
 
     n_out = Examples.n_atom_g_s()
-    ar_out = Examples.ar_atom_g_s()
+    he_out = Examples.he_atom_g_s()
     n2_out = Examples.n2_mol_g_s()
     gedanken_out = GedankenDensity.gedanken_g_s()
 
     # normalize g_s across different systems
     n_out = (n_out[0], n_out[1] / 7)
     n2_out = (n2_out[0], n2_out[1] / 14)
-    ar_out = (ar_out[0], ar_out[1] / 18)
+    he_out = (he_out[0], he_out[1] / 2)
     gedanken_out = (gedanken_out[0], gedanken_out[1] / 1)
 
-    s_min = np.min([n_out[0], ar_out[0], gedanken_out[0]])
-    s_max = np.max([n_out[0], ar_out[0], gedanken_out[0]])
+    s_min = np.min([n_out[0], he_out[0], gedanken_out[0]])
+    s_max = np.max([n_out[0], he_out[0], gedanken_out[0]])
 
     plt.plot(*gedanken_out, label='gedanken')
+    plt.plot(*he_out, label='He atom')
     plt.plot(*n_out, label='N atom')
-    plt.plot(*ar_out, label='Ar atom')
     plt.plot(*n2_out, label='N$_2$ molecule')
 
     utils.use_standard_plotting_params()
@@ -317,6 +355,8 @@ if __name__ == '__main__':
   """ Obtain plots and results for the paper. """
 
   e_c_gdn_density_lyp = GedankenDensity.get_e_xc('gga_c_lyp', gamma=1)
-  print(f'E_c[n^gedanken] = {e_c_gdn_density_lyp}')
+  print(f'E^LYP_c[n^gedanken] = {e_c_gdn_density_lyp}')
+  e_c_gdn_density_pbe = GedankenDensity.get_e_xc('gga_c_pbe', gamma=1)
+  print(f'E^PBE_c[n^gedanken] = {e_c_gdn_density_pbe}')
   GedankenDensity.plot_gedanken_density()
   Examples.combined_examples()

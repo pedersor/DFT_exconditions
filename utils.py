@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def get_density(r_s):
@@ -24,6 +25,7 @@ def get_grad_n(s, n):
 
 
 def use_standard_plotting_params():
+  sns.set_theme()
   plt.rcParams["axes.titlesize"] = 24
   plt.rcParams["axes.labelsize"] = 20
   plt.rcParams["lines.linewidth"] = 3
