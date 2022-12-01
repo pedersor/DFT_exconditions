@@ -62,6 +62,12 @@ class GedankenDensity():
     deriv = np.gradient(arr, dx, edge_order=2, axis=0)
     return deriv
 
+  def num_deriv2_fn(arr, grids):
+    """ Numerical 2nd derivative of arr on grids."""
+    dx = (grids[-1] - grids[0]) / (len(grids) - 1)
+    deriv2 = np.diff(arr, 2, axis=0) / (dx**2)
+    return deriv2
+
   def gedanken_density(
       gamma,
       r_s_min,
@@ -80,26 +86,27 @@ class GedankenDensity():
     # parameterized density
     amp = n_max - n_min
     offset = n_max
-    a = smoothing_factor
-    period = 2 * amp * (1 - a) / grad_n
+    eta = smoothing_factor
+    period = 2 * amp * (1 - eta) / grad_n
 
     # grids used in oscillatory region
     osc_len = (num_peaks - 3 / 4) * period
     grids_1 = np.linspace(0, osc_len, base_grid_pts)
 
-    def osc_density(grids, offset, amp, a, period):
+    def osc_density(grids, offset, amp, eta, period):
       """ Oscillatory region of the density. """
 
       theta = (1 / period) * 2 * pi * (grids + (period / 4))
 
-      osc_density = offset - amp * np.arccos((1 - a) * np.sin(theta)) / pi
-      deriv_osc_density_1 = 2 * amp * (1 - a) * np.cos(theta)
-      deriv_osc_density_2 = period * np.sqrt(1 - (1 - a)**2 * np.sin(theta)**2)
+      osc_density = offset - amp * np.arccos((1 - eta) * np.sin(theta)) / pi
+      deriv_osc_density_1 = 2 * amp * (1 - eta) * np.cos(theta)
+      deriv_osc_density_2 = period * np.sqrt(1 -
+                                             (1 - eta)**2 * np.sin(theta)**2)
       deriv_osc_density = deriv_osc_density_1 / deriv_osc_density_2
 
       return osc_density, deriv_osc_density
 
-    n_osc, grad_n_osc = osc_density(grids_1, offset, amp, a, period)
+    n_osc, grad_n_osc = osc_density(grids_1, offset, amp, eta, period)
 
     # grids used in decay region
     # (use 2x the length of osc. region)
@@ -117,11 +124,13 @@ class GedankenDensity():
 
       return decay_tail, decay_tail_deriv
 
-    tail, tail_deriv = decay_tail(grids_2,
-                                  b=-2,
-                                  x=grids_1[-1],
-                                  y=n_osc[-1],
-                                  y_prime=-grad_n)
+    tail, tail_deriv = decay_tail(
+        grids_2,
+        b=-2,
+        x=grids_1[-1],
+        y=n_osc[-1],
+        y_prime=-grad_n,
+    )
 
     n_g = np.concatenate((n_osc, tail[1:]), axis=0)
     n_g_grad = np.concatenate((grad_n_osc, tail_deriv[1:]), axis=0)
@@ -137,6 +146,8 @@ class GedankenDensity():
     norm = 4 * pi * np.trapz(n_g * (grids**2), grids)
     n_g *= num_elec / norm
     n_g_grad *= num_elec / norm
+
+    # TODO? report parameters used
 
     return grids, n_g, n_g_grad
 
@@ -205,6 +216,33 @@ class GedankenDensity():
     plt.xlim(left=0, right=2.5)
     plt.legend(loc='upper right')
     plt.savefig('gedanken_density.pdf', bbox_inches='tight')
+    plt.close()
+
+  def plot_gedanken_ks_potential():
+    """ Calculate the KS potential for a one- or two-electron (singlet) 
+    radial gedanken density. 
+    
+    Obtained from direct inversion of the radial KS equation:
+
+    v_s(r) = 1/2 (d^2/dr^2 (r n^0.5)) / (r n^0.5) 
+
+    """
+
+    density = GedankenDensity.default_gedanken_density()
+    grids, ged_density, _ = density(gamma=1)
+
+    mask = ged_density > 1e-6
+    mask[0] = mask[-1] = False
+
+    v_s = 0.5 * GedankenDensity.num_deriv2_fn(grids * ged_density**0.5, grids)
+    v_s = v_s[mask[1:-1]] / (grids[mask] * ged_density[mask]**0.5)
+
+    plt.plot(grids, ged_density, label='gedanken density', zorder=2)
+    plt.plot(grids[mask], v_s / 400, label='KS potential / 400', zorder=1)
+    plt.xlabel('$r$')
+    plt.xlim(left=0, right=2.5)
+    plt.legend(loc='upper right')
+    plt.savefig('gedanken_density_w_potential.pdf', bbox_inches='tight')
     plt.close()
 
 
