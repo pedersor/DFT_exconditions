@@ -92,7 +92,6 @@ class GedankenDensity():
 
     # grids used in oscillatory region
     osc_len = (num_peaks - 3 / 4) * period
-
     grids = np.linspace(0, 3 * osc_len, num=3 * base_grid_pts)
     grids_1, grids_2 = np.split(grids, [base_grid_pts])
 
@@ -115,37 +114,46 @@ class GedankenDensity():
       """ decay tail f(x) = c e^(a x^2 + b x) with f(x) = y and f'(x) = y' """
 
       def non_linear_eqs(inp):
+        """ Solve set of non-linear equations to obtain decay tail parameters 
+        by ensuring continuity of 0th, 1st, and 2nd derivatives. """
 
         a, b, c = inp
         gauss = c * np.exp(a * x**2 + b * x)
         gauss_prime = (b + 2 * a * x) * gauss
         gauss_2prime = (2 * a + (b + 2 * a * x)**2) * gauss
-        # match continuities and derivative cont. Assume f''(x) ~ 0.
+
+        # match continuities and derivative cont. (up to 2nd order)
         cont = y - gauss
         cont_prime = y_prime - gauss_prime
         cont_2prime = y_2prime - gauss_2prime
-
         return (cont, cont_prime, cont_2prime)
 
+      def multiple_guess_fsolve(eqs, guess_ranges):
+        # fsolve accuracy very sensitive to initial guess. Try many and refine.
+
+        x0_mesh = np.array(np.meshgrid(*guess_ranges))
+        x0_mesh = x0_mesh.T.reshape(-1, len(guess_ranges))
+
+        fits = []
+        scores = []
+        for x0 in x0_mesh:
+          res = fsolve(eqs, x0, full_output=True)
+          errs = res[1]['fvec']
+          fits.append(res[0])
+          scores.append(np.sum(errs**2))
+
+        fits = np.array(fits)
+        best_fits = scores < sorted(scores)[5]
+        best_fits = fits[best_fits]
+        top_fit = fits[np.argmin(scores)]
+
+        return top_fit, best_fits
+
+      # fsolve accuracy very sensitive to initial guess. Try many and refine.
       a = np.linspace(0, -10, 10)
       b = np.linspace(10, -10, 10)
       c = np.linspace(0, 1, 10)
-      flattened_mesh = np.array(np.meshgrid(a, b, c)).T.reshape(-1, 3)
-
-      fits = []
-      scores = []
-      for inp in flattened_mesh:
-
-        res = fsolve(non_linear_eqs, inp, full_output=True)
-        errs = res[1]['fvec']
-
-        fits.append(res[0])
-        scores.append(np.sum(errs**2))
-
-      print(sorted(scores)[:5])
-
-      best_fits = scores < sorted(scores)[5]
-      best_fits = np.array(fits)[best_fits]
+      _, best_fits = multiple_guess_fsolve(non_linear_eqs, (a, b, c))
 
       a_min = np.min(best_fits[:, 0])
       a_max = np.max(best_fits[:, 0])
@@ -157,22 +165,9 @@ class GedankenDensity():
       a = np.linspace(a_min, a_max, 10)
       b = np.linspace(b_min, b_max, 10)
       c = np.linspace(c_min, c_max, 10)
-      flattened_mesh = np.array(np.meshgrid(a, b, c)).T.reshape(-1, 3)
+      top_fit, _ = multiple_guess_fsolve(non_linear_eqs, (a, b, c))
 
-      fits = []
-      scores = []
-      for inp in flattened_mesh:
-
-        res = fsolve(non_linear_eqs, inp, full_output=True)
-        errs = res[1]['fvec']
-
-        fits.append(res[0])
-        scores.append(np.sum(errs**2))
-
-      print(sorted(scores)[:5])
-
-      # optimal fit
-      a, b, c = fits[np.argmin(scores)]
+      a, b, c = top_fit
       decay_tail = c * np.exp(a * grids**2 + b * grids)
       decay_tail_deriv = (b + 2 * a * grids) * decay_tail
 
@@ -476,6 +471,7 @@ if __name__ == '__main__':
   """ Obtain plots and results for the paper. """
 
   utils.use_standard_plotting_params()
+
   # Fig. 1
   e_c_gdn_density_lyp = GedankenDensity.get_e_xc('gga_c_lyp', gamma=1)
   print(f'E^LYP_c[n^gedanken] = {e_c_gdn_density_lyp}')
