@@ -80,11 +80,13 @@ class GedankenDensity():
       num_elec=2,
   ):
 
+    # desired max and min density values and max \grad n value
+    # in oscillating region.
     n_max = utils.get_density(r_s_min)
     n_min = utils.get_density(r_s_max)
     grad_n = utils.get_grad_n(s_target, (n_max + n_min) / 2)
 
-    # parameterized density
+    # derived density parameters
     amp = n_max - n_min
     offset = n_max
     eta = smoothing_factor
@@ -111,7 +113,8 @@ class GedankenDensity():
     n_osc, grad_n_osc = osc_density(grids_1, offset, amp, eta, period)
 
     def decay_tail(grids, x, y, y_prime, y_2prime):
-      """ decay tail f(x) = c e^(a x^2 + b x) with f(x) = y and f'(x) = y' """
+      """ decay tail f(x) = c e^(a x^2 + b x) with f(x) = y, f'(x) = y', 
+      and f''(x) = y'' """
 
       def non_linear_eqs(inp):
         """ Solve set of non-linear equations to obtain decay tail parameters 
@@ -149,12 +152,13 @@ class GedankenDensity():
 
         return top_fit, best_fits
 
-      # fsolve accuracy very sensitive to initial guess. Try many and refine.
+      # initial guess ranges. Try many and refine.
       a = np.linspace(0, -10, 10)
       b = np.linspace(10, -10, 10)
       c = np.linspace(0, 1, 10)
       _, best_fits = multiple_guess_fsolve(non_linear_eqs, (a, b, c))
 
+      # refined guess ranges.
       a_min = np.min(best_fits[:, 0])
       a_max = np.max(best_fits[:, 0])
       b_min = np.min(best_fits[:, 1])
@@ -182,6 +186,7 @@ class GedankenDensity():
         (grids_1[-1] - grids_1[-2]),
     )
 
+    # append tail to oscillatory region
     n_g = np.concatenate((n_osc, tail), axis=0)
     n_g_grad = np.concatenate((grad_n_osc, tail_deriv), axis=0)
 
@@ -285,22 +290,8 @@ class GedankenDensity():
     v_s = 0.5 * GedankenDensity.num_deriv2_fn(grids * ged_density**0.5, grids)
     v_s = v_s[mask[1:-1]] / (grids[mask] * ged_density[mask]**0.5)
 
-    plt.plot(
-        grids,
-        ged_density,
-        #'o',
-        #markersize=0.1,
-        label='gedanken density',
-        #linestyle='None',
-        zorder=2)
-    plt.plot(
-        grids[mask],
-        v_s / 800,
-        #'o',
-        #markersize=0.1,
-        label='KS potential / 800',
-        #linestyle='None',
-        zorder=1)
+    plt.plot(grids, ged_density, label='gedanken density', zorder=2)
+    plt.plot(grids[mask], v_s / 800, label='KS potential / 800', zorder=1)
     plt.xlabel('$r$')
     plt.xlim(left=0, right=1.8)
     plt.ylim(top=0.4)
@@ -329,12 +320,6 @@ class Examples():
     grids.level = 3
     grids.prune = None
     grids.build()
-    '''
-    # obtain radi from centered atomic coordinates
-    radi = np.sqrt(np.sum(grids.coords**2, axis=1))
-    # round values to prevent duplicates due to numerical precision
-    radi, mask = np.unique(np.around(radi, decimals=10), return_index=True)
-    '''
 
     num_radial_pts = 500
     radial_grids = np.linspace(1e-5, 2.5, num_radial_pts)
