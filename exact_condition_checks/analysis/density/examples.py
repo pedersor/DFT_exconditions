@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
+from scipy.optimize import fsolve
 
 from exact_conds import CondChecker
 import utils
@@ -91,7 +92,9 @@ class GedankenDensity():
 
     # grids used in oscillatory region
     osc_len = (num_peaks - 3 / 4) * period
-    grids_1 = np.linspace(0, osc_len, base_grid_pts)
+
+    grids = np.linspace(0, 3 * osc_len, num=3 * base_grid_pts)
+    grids_1, grids_2 = np.split(grids, [base_grid_pts])
 
     def osc_density(grids, offset, amp, eta, period):
       """ Oscillatory region of the density. """
@@ -108,34 +111,84 @@ class GedankenDensity():
 
     n_osc, grad_n_osc = osc_density(grids_1, offset, amp, eta, period)
 
-    # grids used in decay region
-    # (use 2x the length of osc. region)
-    grids_2 = np.linspace(osc_len, 3 * osc_len, base_grid_pts * 2)
+    def decay_tail(grids, x, y, y_prime, y_2prime):
+      """ decay tail f(x) = c e^(a x^2 + b x) with f(x) = y and f'(x) = y' """
 
-    def decay_tail(grids, b, x, y, y_prime):
-      """ decay tail f(x) = A x^b e^(-kx) with f(x) = y and f'(x) = y' """
+      def non_linear_eqs(inp):
 
-      k = ((-y_prime * x / y) + b) / x
-      A = y / (x**b * np.exp(-k * x))
+        a, b, c = inp
+        gauss = c * np.exp(a * x**2 + b * x)
+        gauss_prime = (b + 2 * a * x) * gauss
+        gauss_2prime = (2 * a + (b + 2 * a * x)**2) * gauss
+        # match continuities and derivative cont. Assume f''(x) ~ 0.
+        cont = y - gauss
+        cont_prime = y_prime - gauss_prime
+        cont_2prime = y_2prime - gauss_2prime
 
-      decay_tail = A * grids**b * np.exp(-k * grids)
-      decay_tail_deriv = A * np.exp(
-          -k * grids) * grids**(-1 + b) * (b - k * grids)
+        return (cont, cont_prime, cont_2prime)
+
+      a = np.linspace(0, -10, 10)
+      b = np.linspace(10, -10, 10)
+      c = np.linspace(0, 1, 10)
+      flattened_mesh = np.array(np.meshgrid(a, b, c)).T.reshape(-1, 3)
+
+      fits = []
+      scores = []
+      for inp in flattened_mesh:
+
+        res = fsolve(non_linear_eqs, inp, full_output=True)
+        errs = res[1]['fvec']
+
+        fits.append(res[0])
+        scores.append(np.sum(errs**2))
+
+      print(sorted(scores)[:5])
+
+      best_fits = scores < sorted(scores)[5]
+      best_fits = np.array(fits)[best_fits]
+
+      a_min = np.min(best_fits[:, 0])
+      a_max = np.max(best_fits[:, 0])
+      b_min = np.min(best_fits[:, 1])
+      b_max = np.max(best_fits[:, 1])
+      c_min = np.min(best_fits[:, 2])
+      c_max = np.max(best_fits[:, 2])
+
+      a = np.linspace(a_min, a_max, 10)
+      b = np.linspace(b_min, b_max, 10)
+      c = np.linspace(c_min, c_max, 10)
+      flattened_mesh = np.array(np.meshgrid(a, b, c)).T.reshape(-1, 3)
+
+      fits = []
+      scores = []
+      for inp in flattened_mesh:
+
+        res = fsolve(non_linear_eqs, inp, full_output=True)
+        errs = res[1]['fvec']
+
+        fits.append(res[0])
+        scores.append(np.sum(errs**2))
+
+      print(sorted(scores)[:5])
+
+      # optimal fit
+      a, b, c = fits[np.argmin(scores)]
+      decay_tail = c * np.exp(a * grids**2 + b * grids)
+      decay_tail_deriv = (b + 2 * a * grids) * decay_tail
 
       return decay_tail, decay_tail_deriv
 
     tail, tail_deriv = decay_tail(
         grids_2,
-        b=-2,
         x=grids_1[-1],
         y=n_osc[-1],
         y_prime=-grad_n,
+        y_2prime=(grad_n_osc[-1] - grad_n_osc[-2]) /
+        (grids_1[-1] - grids_1[-2]),
     )
 
-    n_g = np.concatenate((n_osc, tail[1:]), axis=0)
-    n_g_grad = np.concatenate((grad_n_osc, tail_deriv[1:]), axis=0)
-
-    grids = np.concatenate((grids_1, grids_2[1:]), axis=0)
+    n_g = np.concatenate((n_osc, tail), axis=0)
+    n_g_grad = np.concatenate((grad_n_osc, tail_deriv), axis=0)
 
     # easy rescaling
     grids /= gamma
@@ -237,10 +290,25 @@ class GedankenDensity():
     v_s = 0.5 * GedankenDensity.num_deriv2_fn(grids * ged_density**0.5, grids)
     v_s = v_s[mask[1:-1]] / (grids[mask] * ged_density[mask]**0.5)
 
-    plt.plot(grids, ged_density, label='gedanken density', zorder=2)
-    plt.plot(grids[mask], v_s / 400, label='KS potential / 400', zorder=1)
+    plt.plot(
+        grids,
+        ged_density,
+        #'o',
+        #markersize=0.1,
+        label='gedanken density',
+        #linestyle='None',
+        zorder=2)
+    plt.plot(
+        grids[mask],
+        v_s / 800,
+        #'o',
+        #markersize=0.1,
+        label='KS potential / 800',
+        #linestyle='None',
+        zorder=1)
     plt.xlabel('$r$')
-    plt.xlim(left=0, right=2.5)
+    plt.xlim(left=0, right=1.8)
+    plt.ylim(top=0.4)
     plt.legend(loc='upper right')
     plt.savefig('gedanken_density_w_potential.pdf', bbox_inches='tight')
     plt.close()
@@ -408,9 +476,14 @@ if __name__ == '__main__':
   """ Obtain plots and results for the paper. """
 
   utils.use_standard_plotting_params()
+  # Fig. 1
   e_c_gdn_density_lyp = GedankenDensity.get_e_xc('gga_c_lyp', gamma=1)
   print(f'E^LYP_c[n^gedanken] = {e_c_gdn_density_lyp}')
   e_c_gdn_density_pbe = GedankenDensity.get_e_xc('gga_c_pbe', gamma=1)
   print(f'E^PBE_c[n^gedanken] = {e_c_gdn_density_pbe}')
   GedankenDensity.plot_gedanken_density()
+  # Fig. 2
   Examples.combined_examples()
+
+  # Supp. Material Fig. 1
+  GedankenDensity.plot_gedanken_ks_potential()
