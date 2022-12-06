@@ -11,7 +11,6 @@ sorted_cols = [
     'pbe', 'am05', 'scan', 'r2scan', 'b3lyp', 'b97', 'm06', 'm08-hx', 'sogga11'
 ]
 sorted_cols = [xc.upper() for xc in sorted_cols]
-drop_cols = ['MN15']
 
 pretty_conds = {
     'ec_non_positivity': '$E_c$ non-positivity',
@@ -41,7 +40,6 @@ def get_ie_err_fig():
 
   errs_df = pd.DataFrame.from_dict(errs_df)
   errs_df = errs_df.set_index('System')
-  errs_df.drop(drop_cols, axis=1, inplace=True)
   errs_df = errs_df.reindex(sorted_cols, axis=1)
 
   ax = plt.axes()
@@ -53,7 +51,7 @@ def get_ie_err_fig():
       cbar_kws={'label': 'abs. error [kcal/mol]'},
       ax=ax,
   )
-
+  ax.set_ylabel('')
   ax.set_title('Ionization energies error')
   fig = plot.get_figure()
   fig.savefig('ie_errs.pdf', bbox_inches='tight')
@@ -66,6 +64,7 @@ def exact_cond_checks_fig():
   for i, csv in enumerate(out_dir.glob('checks_*.csv')):
     xc_df = pd.read_csv(csv)
     xc_df = xc_df.drop(xc_df.columns[0], axis=1)
+    xc_df = xc_df.drop(columns=['tc_non_negativity'])
     # True -> 1, False -> 0
     xc_df = xc_df.astype(int)
 
@@ -83,7 +82,6 @@ def exact_cond_checks_fig():
 
   checks_df = pd.DataFrame.from_dict(checks_df)
   checks_df = checks_df.set_index('Exact conds')
-  checks_df.drop(drop_cols, axis=1, inplace=True)
   checks_df = checks_df.rename(pretty_conds, axis='index')
   checks_df = checks_df.reindex(sorted_cols, axis=1)
 
@@ -96,8 +94,7 @@ def exact_cond_checks_fig():
       cbar_kws={'label': 'no. of systems satisfied (max. 35)'},
       ax=ax,
   )
-
-  ax.set_title('Exact conditions')
+  ax.set_ylabel('')
   fig = plot.get_figure()
   fig.savefig('ie_exact_cond_checks.pdf', bbox_inches='tight')
   plt.close()
