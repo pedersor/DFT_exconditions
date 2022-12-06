@@ -7,7 +7,7 @@ import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
 
-from atomic_systems.exact_conds import CondChecker
+from exact_condition_checks.exact_conds import CondChecker
 
 # polarized system
 mol1 = gto.M(
