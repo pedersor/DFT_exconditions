@@ -8,6 +8,14 @@ import pylibxc
 DEBUG = False
 
 xcs = [
+    'mgga_x_revm06_l,mgga_c_revm06_l',
+    'HYB_MGGA_X_M06_SX,MGGA_C_M06_SX',
+    'hyb_mgga_x_m11,mgga_c_m11',
+    'hyb_mgga_x_m05,mgga_c_m05',
+    'hyb_mgga_x_revm06,mgga_c_revm06',
+    'mgga_x_m06_l,mgga_c_m06_l',
+]
+completed_xcs = [
     'hyb_mgga_x_m08_hx,mgga_c_m08_hx',
     'm06',
     'pbe',

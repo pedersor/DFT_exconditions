@@ -13,18 +13,14 @@ if DEBUG:
 else:
   xc = sys.argv[1]
 
-xcs = {
-    'hyb_mgga_x_m08_hx,mgga_c_m08_hx': 'M08-HX',
-    'm06': 'M06',
-    'pbe': 'PBE',
-    'sogga11': 'SOGGA11',
-    'scan': 'SCAN',
-    'r2scan': 'R2SCAN',
-    'b3lyp': 'B3LYP',
-    'mn15': 'MN15',
-    'HYB_GGA_XC_B97': 'B97',
-    'gga_x_am05,gga_c_am05': 'AM05',
-}
+xc = xc.upper()
+if '_XC_' in xc:
+  xc_label = xc.split('_XC_')[-1]
+elif '_C_' in xc:
+  xc_label = xc.split('_C_')[-1]
+else:
+  xc_label = xc
+xc_label = xc_label.replace('_', '-')
 
 dset = Dataset('ie_atoms.yaml')
 
@@ -66,7 +62,7 @@ for system in all_sys_checks:
     flatten_sys_checks[key].append(system[key])
 
 df = pd.DataFrame.from_dict(flatten_sys_checks)
-df.to_csv(f'checks_{xcs[xc]}.csv')
+df.to_csv(f'checks_{xc_label}.csv')
 
 checks = {key: np.all(value) for key, value in flatten_sys_checks.items()}
 print('checks = ', checks)
@@ -75,4 +71,4 @@ print('checks = ', checks)
 df = pd.DataFrame.from_dict(all_sys_errors)
 mae = np.mean(np.abs(df['error'].to_numpy())) * dataset.HAR_TO_KCAL
 print('MAE = ', mae)
-df.to_csv(f'errs_{xcs[xc]}.csv', index=None)
+df.to_csv(f'errs_{xc_label}.csv', index=None)

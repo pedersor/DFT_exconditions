@@ -18,6 +18,13 @@ class CondChecker():
       self.xc = mf.xc
     else:
       self.xc = xc
+
+    # try to find correlation functional
+    if len(self.xc.split(',')) == 2:
+      self.c = self.xc.split(',')[-1]
+    else:
+      self.c = None
+
     self.xctype = libxc.xc_type(self.xc)
     if self.xctype == 'HF':
       # force calculation of higher derivatives on rho (for analysis purposes)
@@ -145,10 +152,13 @@ class CondChecker():
 
   def get_Ec_gam(self, gam, gam_inf=5000):
 
-    # E_x = \lim_{gamma \to \infty} E_xc[n_gamma] / gamma
-    ex = self.get_Exc_gam(gam=gam * gam_inf) / gam_inf
+    if self.c is None:
+      # E_x = \lim_{gamma \to \infty} E_xc[n_gamma] / gamma
+      ex = self.get_Exc_gam(gam * gam_inf, self.xc) / gam_inf
+      ec = self.get_Exc_gam(gam, self.xc) - ex
+    else:
+      ec = self.get_Exc_gam(gam, self.c)
 
-    ec = self.get_Exc_gam(gam) - ex
     return ec
 
   def get_Ec_gams(self, gams):
@@ -195,10 +205,10 @@ class CondChecker():
       self.set_cache('Ex_lda_gams', ex_gams)
     return ex_gams
 
-  def get_Exc_gam(self, gam):
+  def get_Exc_gam(self, gam, xc):
 
     scaled_rho, scaled_weights = self.get_scaled_sys(gam)
-    eps_xc = dft.libxc.eval_xc(self.xc, scaled_rho, spin=self.unrestricted)[0]
+    eps_xc = dft.libxc.eval_xc(xc, scaled_rho, spin=self.unrestricted)[0]
 
     if not self.unrestricted:
       rho = scaled_rho[0]
@@ -222,7 +232,7 @@ class CondChecker():
     return exc
 
   def get_Exc_gams(self, gams):
-    exc_gams = np.array([self.get_Exc_gam(gam) for gam in gams])
+    exc_gams = np.array([self.get_Exc_gam(gam, self.xc) for gam in gams])
     return exc_gams
 
   @staticmethod
