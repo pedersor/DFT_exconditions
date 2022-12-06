@@ -357,6 +357,7 @@ def check_condition(
 
   df = {
       'xc': [func_id],
+      'condition': [condition_string],
       'satisfied': [],
       'percent_violated': [],
   }
@@ -641,24 +642,3 @@ def negativity_check(input, f_c, r_s_dx, tol=1e-5):
     ranges = None
 
   return cond_satisfied, num_violated, ranges
-
-
-if __name__ == '__main__':
-  """ test check_condition. """
-
-  input = {
-      'r_s': np.linspace(0.01, 5, 1000),
-      's': np.linspace(0.1, 3, 200),
-      'zeta': np.array([0]),
-      #'alpha': np.array([0.5]),
-      #'q': np.array([0.5])
-  }
-
-  df = check_condition(
-      "hyb_gga_xc_b97",
-      "negativity_check",
-      input,
-      num_splits=1,
-  )
-
-  print(df)

@@ -5,9 +5,16 @@ import pylibxc
 
 import condition_checks
 
-func_id = sys.argv[1]
-condition_string = sys.argv[2]
-range_type = sys.argv[3]
+DEBUG = False
+
+if DEBUG:
+  func_id = 'mgga_c_m06'
+  condition_string = 'lieb_oxford_bd_check_Exc'
+  range_type = 'comprehensive'
+else:
+  func_id = sys.argv[1]
+  condition_string = sys.argv[2]
+  range_type = sys.argv[3]
 
 print(f"running: {func_id}", flush=True)
 print(f"checking condition: {condition_string}", flush=True)
@@ -18,7 +25,7 @@ func_c = pylibxc.LibXCFunctional(func_id, "polarized")
 if range_type == 'comprehensive':
   if 'mgga_c_' in func_id or 'mgga_xc_' in func_id:
     if func_c._needs_laplacian:
-      input = {
+      inp = {
           'r_s': np.linspace(0.0001, 5, 3000),
           's': np.linspace(0, 5, 100),
           'zeta': np.linspace(0, 1, 20),
@@ -27,7 +34,7 @@ if range_type == 'comprehensive':
       }
       num_splits = 100
     else:
-      input = {
+      inp = {
           'r_s': np.linspace(0.0001, 5, 5000),
           's': np.linspace(0, 5, 100),
           'zeta': np.linspace(0, 1, 20),
@@ -35,7 +42,7 @@ if range_type == 'comprehensive':
       }
       num_splits = 50
   elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
-    input = {
+    inp = {
         'r_s': np.linspace(0.0001, 5, 10000),
         's': np.linspace(0, 5, 500),
         'zeta': np.linspace(0, 1, 100),
@@ -45,13 +52,13 @@ if range_type == 'comprehensive':
   df = condition_checks.check_condition(
       func_id,
       condition_string,
-      input,
+      inp,
       num_splits=num_splits,
   )
 elif range_type == 'unpol_nonzero_s':
   if 'mgga_c_' in func_id or 'mgga_xc_' in func_id:
     if func_c._needs_laplacian:
-      input = {
+      inp = {
           'r_s': np.linspace(0.01, 5, 3000),
           's': np.linspace(0.1, 5, 100),
           'zeta': np.array([0]),
@@ -60,7 +67,7 @@ elif range_type == 'unpol_nonzero_s':
       }
       num_splits = 100
     else:
-      input = {
+      inp = {
           'r_s': np.linspace(0.01, 5, 5000),
           's': np.linspace(0.1, 5, 100),
           'zeta': np.array([0]),
@@ -68,7 +75,7 @@ elif range_type == 'unpol_nonzero_s':
       }
       num_splits = 50
   elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
-    input = {
+    inp = {
         'r_s': np.linspace(0.01, 5, 10000),
         's': np.linspace(0.1, 5, 500),
         'zeta': np.array([0]),
@@ -78,14 +85,14 @@ elif range_type == 'unpol_nonzero_s':
   df = condition_checks.check_condition(
       func_id,
       condition_string,
-      input,
+      inp,
       num_splits=num_splits,
   )
 
 elif range_type == 'unpol_small_s':
   if 'mgga_c_' in func_id or 'mgga_xc_' in func_id:
     if func_c._needs_laplacian:
-      input = {
+      inp = {
           'r_s': np.linspace(0.01, 5, 3000),
           's': np.linspace(0, 0.1, 10),
           'zeta': np.array([0]),
@@ -94,7 +101,7 @@ elif range_type == 'unpol_small_s':
       }
       num_splits = 5
     else:
-      input = {
+      inp = {
           'r_s': np.linspace(0.01, 5, 5000),
           's': np.linspace(0, 0.1, 10),
           'zeta': np.array([0]),
@@ -102,7 +109,7 @@ elif range_type == 'unpol_small_s':
       }
       num_splits = 5
   elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
-    input = {
+    inp = {
         'r_s': np.linspace(0.01, 5, 10000),
         's': np.linspace(0, 0.1, 10),
         'zeta': np.array([0]),
@@ -112,10 +119,10 @@ elif range_type == 'unpol_small_s':
   df = condition_checks.check_condition(
       func_id,
       condition_string,
-      input,
+      inp,
       num_splits=num_splits,
   )
 else:
   NotImplementedError(f"range_type {range_type} not supported.")
 
-df.to_csv(f'{func_id}.csv', header=False, index=False)
+df.to_csv(f'{func_id}_{condition_string}.csv', header=False, index=False)
