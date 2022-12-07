@@ -265,7 +265,7 @@ class GedankenDensity():
     plt.plot(he_grids, he_density / 7, label='He density / 7')
     plt.ylabel('$n(r)$')
     plt.xlabel('$r$')
-    plt.ylim(bottom=0)
+    plt.ylim(bottom=0, top=0.3)
     plt.xlim(left=0, right=2.5)
     plt.legend(loc='upper right')
     plt.savefig('gedanken_density.pdf', bbox_inches='tight')
