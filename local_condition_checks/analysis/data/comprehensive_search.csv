@@ -1,4 +1,4 @@
-xc_id,condition satisfied?,violation fraction,r_s range,s range,zeta range,alpha range,q range,condition,type,xc_name
+xc_id,satisfied,violation fraction,r_s range,s range,zeta range,alpha range,q range,condition,type,xc_name
 gga_c_acgga,True,0.0,,,,,,deriv_upper_bd_check_2,GGA,ACGGA
 gga_c_acgga,True,0.0,,,,,,negativity_check,GGA,ACGGA
 gga_c_acgga,True,0.0,,,,,,deriv_lower_bd_check,GGA,ACGGA
