@@ -30,7 +30,8 @@ df = pd.read_csv(
 )
 
 df.sort_values(by=['xc_id'], inplace=True)
-df['type'] = df['xc_id'].apply(lambda x: x.split('_c_')[0].upper())
+df['type'] = df['xc_id'].apply(
+    lambda x: x.split('_c_')[0].split('_xc_')[0].upper())
 df['xc_name'] = df['xc_id'].apply(
-    lambda x: x.split('_c_')[-1].replace('_', '-').upper())
+    lambda x: x.split('_c_')[-1].split('_xc_')[-1].replace('_', '-').upper())
 df.to_csv('data.csv', index=False)
