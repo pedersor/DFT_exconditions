@@ -10,6 +10,8 @@ import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
 from scipy.optimize import fsolve
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 from exact_conds import CondChecker
 import utils
@@ -290,12 +292,34 @@ class GedankenDensity():
     v_s = 0.5 * GedankenDensity.num_deriv2_fn(grids * ged_density**0.5, grids)
     v_s = v_s[mask[1:-1]] / (grids[mask] * ged_density[mask]**0.5)
 
-    plt.plot(grids, ged_density, label='gedanken density', zorder=2)
-    plt.plot(grids[mask], v_s / 800, label='KS potential / 800', zorder=1)
-    plt.xlabel('$r$')
-    plt.xlim(left=0, right=1.8)
-    plt.ylim(top=0.4)
-    plt.legend(loc='upper right')
+    ax = plt.axes()
+    ax.plot(grids, ged_density, label='gedanken density', zorder=2)
+    # potential scale
+    v_s_scale = 800
+    ax.plot(grids[mask],
+            v_s / v_s_scale,
+            label=f'KS potential / {v_s_scale}',
+            zorder=1)
+    ax.set_xlabel('$r$')
+    ax.set_xlim(left=0, right=1.8)
+    ax.set_ylim(top=0.4)
+    ax.legend(loc='upper right')
+
+    # zoomed in plot on peak
+    axins = zoomed_inset_axes(ax, 4, loc=4)  # zoom = 2
+    axins.plot(grids[mask], v_s / v_s_scale, color=ax.lines[-1].get_color())
+    axins.set_xlim(0.31 - 0.05, 0.31 + 0.05)
+    axins.set_ylim(-0.11, -0.07)
+    axins.set_xticks([])
+    axins.set_yticks([])
+    axins.spines['bottom'].set_color('0.5')
+    axins.spines['top'].set_color('0.5')
+    axins.spines['left'].set_color('0.5')
+    axins.spines['right'].set_color('0.5')
+    axins.grid(alpha=0)
+    mark_inset(ax, axins, loc1=1, loc2=3, fc="none", ec="0.5")
+
+    plt.draw()
     plt.savefig('gedanken_density_w_potential.pdf', bbox_inches='tight')
     plt.close()
 
