@@ -32,7 +32,7 @@ if range_type == 'comprehensive':
           'alpha': np.linspace(0, 5, 10),
           'q': np.linspace(0, 5, 50),
       }
-      num_splits = 100
+      num_blocks = 100
     else:
       inp = {
           'r_s': np.linspace(0.0001, 5, 5000),
@@ -40,20 +40,20 @@ if range_type == 'comprehensive':
           'zeta': np.linspace(0, 1, 20),
           'alpha': np.linspace(0, 5, 100),
       }
-      num_splits = 50
+      num_blocks = 50
   elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
     inp = {
         'r_s': np.linspace(0.0001, 5, 10000),
         's': np.linspace(0, 5, 500),
         'zeta': np.linspace(0, 1, 100),
     }
-    num_splits = 100
+    num_blocks = 100
 
   df = condition_checks.check_condition(
       func_id,
       condition_string,
       inp,
-      num_splits=num_splits,
+      num_blocks=num_blocks,
   )
 elif range_type == 'unpol_nonzero_s':
   if 'mgga_c_' in func_id or 'mgga_xc_' in func_id:
@@ -65,7 +65,7 @@ elif range_type == 'unpol_nonzero_s':
           'alpha': np.linspace(0, 5, 10),
           'q': np.linspace(0, 5, 50),
       }
-      num_splits = 100
+      num_blocks = 100
     else:
       inp = {
           'r_s': np.linspace(0.01, 5, 5000),
@@ -73,20 +73,20 @@ elif range_type == 'unpol_nonzero_s':
           'zeta': np.array([0]),
           'alpha': np.linspace(0, 5, 100),
       }
-      num_splits = 50
+      num_blocks = 50
   elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
     inp = {
         'r_s': np.linspace(0.01, 5, 10000),
         's': np.linspace(0.1, 5, 500),
         'zeta': np.array([0]),
     }
-    num_splits = 100
+    num_blocks = 100
 
   df = condition_checks.check_condition(
       func_id,
       condition_string,
       inp,
-      num_splits=num_splits,
+      num_blocks=num_blocks,
   )
 
 elif range_type == 'unpol_small_s':
@@ -99,7 +99,7 @@ elif range_type == 'unpol_small_s':
           'alpha': np.linspace(0, 5, 10),
           'q': np.linspace(0, 5, 50),
       }
-      num_splits = 5
+      num_blocks = 5
     else:
       inp = {
           'r_s': np.linspace(0.01, 5, 5000),
@@ -107,20 +107,20 @@ elif range_type == 'unpol_small_s':
           'zeta': np.array([0]),
           'alpha': np.linspace(0, 5, 100),
       }
-      num_splits = 5
+      num_blocks = 5
   elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
     inp = {
         'r_s': np.linspace(0.01, 5, 10000),
         's': np.linspace(0, 0.1, 10),
         'zeta': np.array([0]),
     }
-    num_splits = 5
+    num_blocks = 5
 
   df = condition_checks.check_condition(
       func_id,
       condition_string,
       inp,
-      num_splits=num_splits,
+      num_blocks=num_blocks,
   )
 else:
   NotImplementedError(f"range_type {range_type} not supported.")
