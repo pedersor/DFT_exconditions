@@ -13,6 +13,9 @@ __pycache__/
 # virtual envs
 venv*
 
+# pip install files
+*.egg-info/
+
 # temporary files
 tmp*
 

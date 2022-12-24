@@ -3,8 +3,6 @@ import subprocess
 from pathlib import Path
 import shutil
 
-import pylibxc
-
 DEBUG = False
 
 xcs = [

@@ -6,8 +6,8 @@ import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
 
-from dataset import Entry, System
-from exact_conds import CondChecker
+from dft_exconditions.exact_conditions.dataset import Entry, System
+from dft_exconditions.exact_conditions.exact_conds import CondChecker
 
 
 class PyscfEvaluator():

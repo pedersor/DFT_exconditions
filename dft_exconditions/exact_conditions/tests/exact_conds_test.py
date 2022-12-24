@@ -1,13 +1,11 @@
 import pytest
 import sys
 
-sys.path.append('../../')
-
 import numpy as np
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint
 
-from exact_condition_checks.exact_conds import CondChecker
+from dft_exconditions.exact_conditions.exact_conds import CondChecker
 
 # polarized system
 mol1 = gto.M(

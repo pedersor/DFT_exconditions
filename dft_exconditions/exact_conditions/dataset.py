@@ -6,7 +6,7 @@ import numpy as np
 from pyscf import gto, cc, scf
 import pandas as pd
 
-from exact_conds import CondChecker
+from dft_exconditions.exact_conditions.exact_conds import CondChecker
 
 HAR_TO_EV = 27.2114
 HAR_TO_KCAL = 627.5
@@ -122,7 +122,7 @@ class EntryIE(Entry):
   def entry_type(self) -> str:
     return "ie"
 
-  def get_val(self, evl: 'PyscfEvaluator'):
+  def get_val(self, evl):
     evl.get_mfs(self)
     tot_energies = np.array([mf.e_tot for mf in evl.mfs])
     ie = np.dot(np.array(self["dotvec"]), tot_energies)
@@ -133,7 +133,7 @@ class EntryIE(Entry):
 
   def exact_cond_checks(
       self,
-      evl: 'PyscfEvaluator',
+      evl,
       gams,
       xc,
   ):
@@ -157,7 +157,7 @@ class EntryEA(Entry):
   def entry_type(self) -> str:
     return "ea"
 
-  def get_val(self, evl: 'PyscfEvaluator'):
+  def get_val(self, evl):
 
     evl.get_non_scf_mfs(self)
     tot_energies = np.array([mf.e_tot for mf in evl.non_scf_mfs])
@@ -169,7 +169,7 @@ class EntryEA(Entry):
 
   def exact_cond_checks(
       self,
-      evl: 'PyscfEvaluator',
+      evl,
       gams,
       xc,
   ):

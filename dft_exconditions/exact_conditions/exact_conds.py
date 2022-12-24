@@ -1,7 +1,6 @@
 import copy
 
 import numpy as np
-
 from pyscf import gto, dft, lib, cc, scf
 from pyscf.dft import numint, libxc
 from scipy.stats import linregress

@@ -3,9 +3,8 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 
-from evaluator import PyscfEvaluator
-import dataset
-from dataset import Dataset
+from dft_exconditions.exact_conditions.evaluator import PyscfEvaluator
+from dft_exconditions.exact_conditions.dataset import Dataset
 
 DEBUG = False
 

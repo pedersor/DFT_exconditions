@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pylibxc
 
-import condition_checks
+from dft_exconditions.local_conditions import condition_checks
 
 DEBUG = False
 
