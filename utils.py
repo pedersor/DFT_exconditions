@@ -4,14 +4,21 @@ import seaborn as sns
 
 
 def get_density(r_s):
+  """ Obtain densities from the Wigner-Seitz radii, r_s."""
+
   return 3 / (4 * np.pi * (r_s**3))
 
 
 def get_r_s(n):
+  """ Obtain Wigner-Seitz radii from the densities, n."""
+
   return (4 * np.pi * n / 3)**(-1 / 3)
 
 
 def get_s(n, n_grad):
+  """ Obtain the reduced gradient, s, from the densities, n, and gradient 
+  magnitudes, |\nabla n|."""
+
   if n_grad.ndim == 1:
     n_grad = np.abs(n_grad)
   else:
@@ -20,7 +27,8 @@ def get_s(n, n_grad):
 
 
 def get_grad_n(s, n):
-  """ Obtain |\nabla n| from the reduced gradient s. """
+  """ Obtain the gradient magnitude, |\nabla n|, from the reduced gradient s. """
+
   return s * (2 * ((3 * np.pi**2)**(1 / 3)) * (n**(4 / 3)))
 
 

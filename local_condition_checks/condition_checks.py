@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,7 @@ def get_grad_n(s, n):
 
 
 def get_up_dn_density(n, zeta):
-  """Obtains [n_up, n_dn]"""
+  """Obtains [n_up, n_dn] from density n and relative spin polarization zeta."""
 
   n = np.expand_dims(n, axis=1)
   zeta = np.expand_dims(zeta, axis=1)
@@ -52,7 +52,8 @@ def zeta_coeffs(zeta):
 
 def get_tau(alpha, grad_n, n, zeta):
   """ Obtains [tau_up, tau_dn] where 
-  tau_sigma = 1/2 \sum_i^occ |\nabla \phi_{sigma i}|^2 ."""
+  tau_sigma = 1/2 \sum_i^occ |\nabla \phi_{sigma i}|^2 .
+  """
 
   tau_w = (grad_n**2) / (8 * n)
   tau_unif = (3 / 10) * ((3 * np.pi**2)**(2 / 3)) * (n**(5 / 3))
@@ -70,7 +71,7 @@ def get_tau(alpha, grad_n, n, zeta):
 
 def get_sigma(grad_n, zeta):
   """ Obtains [\nabla n_up * \nabla n_up, \nabla n_up * \nabla n_dn, 
-    \nabla n_dn * \nabla n_dn]
+    \nabla n_dn * \nabla n_dn] .
   """
 
   sigma = np.expand_dims(grad_n**2, axis=1)
@@ -87,7 +88,8 @@ def get_sigma(grad_n, zeta):
 
 def get_lapl(q, n, zeta):
   """ Obtains laplacian [\nabla^2 n_up, \nabla^2 n_dn]. 
-  q is reduced density Laplacian. Eq. 14 in PhysRevA.96.052512 ."""
+  q is reduced density Laplacian. Eq. 14 in PhysRevA.96.052512 .
+  """
 
   n = np.expand_dims(n, axis=1)
   q = np.expand_dims(q, axis=1)
@@ -103,7 +105,6 @@ def get_lapl(q, n, zeta):
 
 def lda_xc(func_c, r_s, zeta):
   """ Obtains correlation energy per particle for LDA-type functionals: 
-
   \epsilon_c^{LDA}(r_s, \zeta) .
   """
 
@@ -112,7 +113,7 @@ def lda_xc(func_c, r_s, zeta):
   inp = (feature.flatten() for feature in inp)
   r_s, zeta = inp
 
-  # obtain libxc inps
+  # obtain Libxc inps
   n = get_density(r_s)
   rho = get_up_dn_density(n, zeta)
 
@@ -127,9 +128,7 @@ def lda_xc(func_c, r_s, zeta):
 
 def gga_xc(func_c, r_s, s, zeta):
   """ Obtains correlation energy per particle for GGA-type functionals:
-
   \epsilon_c^{GGA}(r_s, s, \zeta, \alpha) .
-
   """
 
   mesh_shape = r_s.shape
@@ -137,7 +136,7 @@ def gga_xc(func_c, r_s, s, zeta):
   inp = (feature.flatten() for feature in inp)
   r_s, s, zeta = inp
 
-  # obtain libxc inps
+  # obtain Libxc inps
   n = get_density(r_s)
   grad_n = get_grad_n(s, n)
   rho = get_up_dn_density(n, zeta)
@@ -165,7 +164,7 @@ def mgga_xc(func_c, r_s, s, zeta, alpha, q=None):
   inp = (feature.flatten() for feature in inp)
   r_s, s, zeta, alpha = inp
 
-  # obtain libxc inps
+  # obtain Libxc inps
   n = get_density(r_s)
   grad_n = get_grad_n(s, n)
   rho = get_up_dn_density(n, zeta)
@@ -195,7 +194,7 @@ def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
   inp = (feature.flatten() for feature in inp)
   r_s, s, zeta, alpha, q = inp
 
-  # obtain libxc inps
+  # obtain Libxc inputs
   n = get_density(r_s)
   grad_n = get_grad_n(s, n)
   rho = get_up_dn_density(n, zeta)
@@ -225,8 +224,16 @@ def eps_to_enh_factor(inp_mesh, eps_x_c):
   return eps_x_c / eps_x_unif
 
 
-def get_dfa_rung(func_id):
-  """ returns the DFA type of a given functional. """
+def get_dfa_rung(func_id: str) -> Callable:
+  """ Returns the density functional approximation (DFA) type of a 
+  given functional. 
+
+  Args:
+    func_id: Libxc functional identifier.
+
+  Returns:
+    fun: callable dfa_xc function.
+  """
 
   dfa_rungs = {
       "lda_": lda_xc,
@@ -236,21 +243,29 @@ def get_dfa_rung(func_id):
       "hyb_gga_": gga_xc,
   }
 
-  for dfa in dfa_rungs:
+  for dfa, dfa_fun in dfa_rungs.items():
     if dfa in func_id:
-      return dfa_rungs[dfa]
+      return dfa_fun
 
   return NotImplementedError(f"functional {func_id} not supported.")
 
 
-def is_xc_func(func_id):
+def is_xc_func(func_id: str) -> bool:
+  """ checks if a given functional is a XC functional than cannot be 
+  separated in Libxc. 
+  """
+
   return '_xc_' in func_id
 
 
-def get_enh_factor_x_c(func_id, inp, lam=5000, xc_func=False):
+def get_enh_factor_x_c(
+    func_id: str,
+    std_inp: List[np.ndarray],
+    xc_func=False,
+):
   """ obtains enhancement factor for a given functional and input (inp). """
 
-  inp_mesh = np.meshgrid(*inp, indexing='ij')
+  inp_mesh = np.meshgrid(*std_inp, indexing='ij')
   dfa = get_dfa_rung(func_id)
 
   # hyb_c_func workaround
@@ -265,9 +280,10 @@ def get_enh_factor_x_c(func_id, inp, lam=5000, xc_func=False):
 
     # obtain and substract off exchange.
     # scale: r_s/lambda.
-    scaled_r_s = inp[0] / lam
-    scaled_inp_mesh = np.meshgrid(scaled_r_s, *inp[1:], indexing='ij')
-    eps_x = dfa(func_xc, *scaled_inp_mesh) / lam
+    inf_lam = 5000
+    scaled_r_s = std_inp[0] / inf_lam
+    scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
+    eps_x = dfa(func_xc, *scaled_inp_mesh) / inf_lam
     f_x = eps_to_enh_factor(inp_mesh, eps_x)
 
     f_c = f_xc - f_x
@@ -280,9 +296,10 @@ def get_enh_factor_x_c(func_id, inp, lam=5000, xc_func=False):
 
     # obtain and substract off exchange.
     # scale: r_s/lambda.
-    scaled_r_s = inp[0] / lam
-    scaled_inp_mesh = np.meshgrid(scaled_r_s, *inp[1:], indexing='ij')
-    eps_x = dfa(func_xc, *scaled_inp_mesh) / lam
+    inf_lam = 5000
+    scaled_r_s = std_inp[0] / inf_lam
+    scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
+    eps_x = dfa(func_xc, *scaled_inp_mesh) / inf_lam
     f_x = eps_to_enh_factor(inp_mesh, eps_x)
     return f_x
   else:
@@ -298,11 +315,11 @@ def get_enh_factor_x_c(func_id, inp, lam=5000, xc_func=False):
 def check_condition_work(
     func_id: str,
     condition: Callable,
-    inp: List[np.ndarray],
+    std_inp: List[np.ndarray],
     tol: Optional[float] = None,
 ) -> Tuple:
 
-  r_s = inp[0]
+  r_s = std_inp[0]
   r_s_dx = r_s[1] - r_s[0]
   xc_func = is_xc_func(func_id)
   if xc_func:
@@ -311,48 +328,33 @@ def check_condition_work(
     func_id_c = func_id
 
   if 'lieb_oxford_bd_check' in condition.__name__:
-    f_c = get_enh_factor_x_c(func_id_c, inp, xc_func=xc_func)
+    f_c = get_enh_factor_x_c(func_id_c, std_inp, xc_func=xc_func)
 
     # get exchange
     try:
       func_id_x = func_id_c.replace('_c_', '_x_')
-      f_x = get_enh_factor_x_c(func_id_x, inp, xc_func=xc_func)
+      f_x = get_enh_factor_x_c(func_id_x, std_inp, xc_func=xc_func)
     except:
       func_id_x = 'hyb_' + func_id_c.replace('_c_', '_x_')
-      f_x = get_enh_factor_x_c(func_id_x, inp, xc_func=xc_func)
+      f_x = get_enh_factor_x_c(func_id_x, std_inp, xc_func=xc_func)
 
     f_x_c = (f_x, f_c)
   else:
-    f_x_c = get_enh_factor_x_c(func_id_c, inp, xc_func=xc_func)
+    f_x_c = get_enh_factor_x_c(func_id_c, std_inp, xc_func=xc_func)
 
-  inp_mesh = np.meshgrid(*inp, indexing='ij')
-  if tol:
-    result = condition(inp_mesh, f_x_c, r_s_dx, tol)
-  else:
-    # use default tol for condition
-    result = condition(inp_mesh, f_x_c, r_s_dx)
+  inp_mesh = np.meshgrid(*std_inp, indexing='ij')
+  result = condition(inp_mesh, f_x_c, r_s_dx, tol)
 
   return result
 
 
-def condition_string_to_fun(condition_string):
-  """ get condition function (callable) from identifying string. """
-
-  try:
-    cond = globals()[condition_string]
-  except KeyError:
-    raise NotImplementedError(f"Condition not implemented: {condition_string}")
-
-  return cond
-
-
 def check_condition(
-    func_id,
-    condition_string,
-    inp,
-    num_blocks=100,
-    tol=None,
-):
+    func_id: str,
+    condition_string: str,
+    inp: Dict[str, np.ndarray],
+    num_blocks: Optional[int] = 100,
+    tol: Optional[float] = None,
+) -> pd.DataFrame:
   """ Checks if a given condition is met for a given functional and inp. 
   If the condition is not met, return min. and max. variables where the 
   condition is not met. The percentage of violations is also returned.
@@ -360,7 +362,7 @@ def check_condition(
   Args:
     func_id: XC functional identifier.
     condition_string: string identifying the condition function to check.
-    inp: dictionary of inp variables. Expected keys are 'r_s', 'zeta', 
+    inp: dictionary of input variables. Expected keys are 'r_s', 'zeta', 
       's', 'alpha', or 'q'.
     num_blocks: split the data into num_blocks blocks (based on memory 
       constraints) to check the condition.
@@ -456,20 +458,31 @@ def check_condition(
   return df
 
 
+def condition_string_to_fun(condition_string: str) -> Callable:
+  """ get condition function (callable) from identifying string. """
+
+  try:
+    cond_fun = globals()[condition_string]
+  except KeyError:
+    raise NotImplementedError(f"Condition not implemented: {condition_string}")
+
+  return cond_fun
+
+
 def lieb_oxford_bd_check_Uxc(
-    inp,
-    f_x_c,
-    r_s_dx,
-    tol=1e-3,
-    lieb_oxford_bd_const=2.27,
-):
+    std_inp: List[np.ndarray],
+    f_x_c: Tuple[np.ndarray, np.ndarray],
+    r_s_dx: float,
+    tol: Optional[float] = 1e-3,
+    lieb_oxford_bd_const: Optional[float] = 2.27,
+) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """ 
   original Lieb-Oxford bound on Uxc:
 
-  F_xc +  r_s (d F_c / dr_s) <= C 
+  F_xc +  r_s (d F_c / dr_s) <= lieb_oxford_bd_const
   """
 
-  r_s_mesh = inp[0]
+  r_s_mesh = std_inp[0]
   f_x, f_c = f_x_c
   f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
   f_xc = f_c + f_x
@@ -486,7 +499,7 @@ def lieb_oxford_bd_check_Uxc(
 
   if not cond_satisfied:
     ranges = ([np.amin(feature[regions]),
-               np.amax(feature[regions])] for feature in inp)
+               np.amax(feature[regions])] for feature in std_inp)
   else:
     ranges = None
 
@@ -494,12 +507,12 @@ def lieb_oxford_bd_check_Uxc(
 
 
 def lieb_oxford_bd_check_Exc(
-    inp,
-    f_x_c,
-    r_s_dx,
-    tol=1e-3,
-    lieb_oxford_bd_const=2.27,
-):
+    std_inp: List[np.ndarray],
+    f_x_c: Tuple[np.ndarray, np.ndarray],
+    r_s_dx: float,
+    tol: Optional[float] = 1e-3,
+    lieb_oxford_bd_const: Optional[float] = 2.27,
+) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """ 
   Lieb-Oxford bound on Exc:
 
@@ -525,14 +538,19 @@ def lieb_oxford_bd_check_Exc(
 
   if not cond_satisfied:
     ranges = ([np.amin(feature[regions]),
-               np.amax(feature[regions])] for feature in inp)
+               np.amax(feature[regions])] for feature in std_inp)
   else:
     ranges = None
 
   return cond_satisfied, num_violated, ranges
 
 
-def deriv_lower_bd_check(inp, f_c, r_s_dx, tol=1e-5):
+def deriv_lower_bd_check(
+    std_inp: List[np.ndarray],
+    f_c: Tuple[np.ndarray, np.ndarray],
+    r_s_dx: float,
+    tol: Optional[float] = 1e-5,
+) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """
   0 <= d F_c / dr_s
   """
@@ -549,21 +567,26 @@ def deriv_lower_bd_check(inp, f_c, r_s_dx, tol=1e-5):
 
   if not cond_satisfied:
     # remove first entry
-    inp = (feature[:-1].flatten() for feature in inp)
+    std_inp = (feature[:-1].flatten() for feature in std_inp)
     ranges = ([np.amin(feature[regions]),
-               np.amax(feature[regions])] for feature in inp)
+               np.amax(feature[regions])] for feature in std_inp)
   else:
     ranges = None
 
   return cond_satisfied, num_violated, ranges
 
 
-def deriv_upper_bd_check_1(inp, f_c, r_s_dx, tol=1e-3):
+def deriv_upper_bd_check_1(
+    std_inp: List[np.ndarray],
+    f_c: Tuple[np.ndarray, np.ndarray],
+    r_s_dx: float,
+    tol: Optional[float] = 1e-3,
+) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """ 
   d F_c / dr_s <= (F_c[r_s->\infty, ...] - F_c[r_s, ...]) / r_s 
   """
 
-  r_s_mesh = inp[0]
+  r_s_mesh = std_inp[0]
   f_c_inf = f_c[-1]
   f_c = f_c[:-1]
   r_s_mesh = r_s_mesh[:-1]
@@ -581,14 +604,19 @@ def deriv_upper_bd_check_1(inp, f_c, r_s_dx, tol=1e-3):
 
   if not cond_satisfied:
     ranges = ([np.amin(feature[:-1][regions]),
-               np.amax(feature[:-1][regions])] for feature in inp)
+               np.amax(feature[:-1][regions])] for feature in std_inp)
   else:
     ranges = None
 
   return cond_satisfied, num_violated, ranges
 
 
-def deriv_upper_bd_check_2(inp, f_c, r_s_dx, tol=5e-4):
+def deriv_upper_bd_check_2(
+    std_inp: List[np.ndarray],
+    f_c: Tuple[np.ndarray, np.ndarray],
+    r_s_dx: float,
+    tol: Optional[float] = 5e-4,
+) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """ 
   d F_c / dr_s <= F_c / r_s .
   
@@ -596,7 +624,7 @@ def deriv_upper_bd_check_2(inp, f_c, r_s_dx, tol=5e-4):
     T_c[n] <= -E_c[n].
   """
 
-  r_s_mesh = inp[0]
+  r_s_mesh = std_inp[0]
 
   regions_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
   regions = np.where(
@@ -611,17 +639,22 @@ def deriv_upper_bd_check_2(inp, f_c, r_s_dx, tol=5e-4):
 
   if not cond_satisfied:
     ranges = ([np.amin(feature[regions]),
-               np.amax(feature[regions])] for feature in inp)
+               np.amax(feature[regions])] for feature in std_inp)
   else:
     ranges = None
 
   return cond_satisfied, num_violated, ranges
 
 
-def second_deriv_check(inp, f_c, r_s_dx, tol=1e-3):
+def second_deriv_check(
+    std_inp: List[np.ndarray],
+    f_c: Tuple[np.ndarray, np.ndarray],
+    r_s_dx: float,
+    tol: Optional[float] = 1e-3,
+) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """ d^2 F_c / dr_s^2 >= (-2/r_s) d F_c / dr_s . """
 
-  r_s_mesh = inp[0]
+  r_s_mesh = std_inp[0]
 
   f_c_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
   f_c_2grad = np.diff(f_c, 2, axis=0) / (r_s_dx**2)
@@ -642,14 +675,19 @@ def second_deriv_check(inp, f_c, r_s_dx, tol=1e-3):
     ranges = ([
         np.amin(feature[1:-1][regions]),
         np.amax(feature[1:-1][regions])
-    ] for feature in inp)
+    ] for feature in std_inp)
   else:
     ranges = None
 
   return cond_satisfied, num_violated, ranges
 
 
-def negativity_check(inp, f_c, r_s_dx, tol=1e-5):
+def negativity_check(
+    std_inp: List[np.ndarray],
+    f_c: Tuple[np.ndarray, np.ndarray],
+    r_s_dx: float,
+    tol: Optional[float] = 1e-5,
+) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """ F_c >= 0 ."""
 
   # r_s_dx not used in this condition, but included for consistency with other
@@ -667,7 +705,7 @@ def negativity_check(inp, f_c, r_s_dx, tol=1e-5):
 
   if not cond_satisfied:
     ranges = ([np.amin(feature[regions]),
-               np.amax(feature[regions])] for feature in inp)
+               np.amax(feature[regions])] for feature in std_inp)
   else:
     ranges = None
 

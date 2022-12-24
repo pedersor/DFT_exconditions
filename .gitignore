@@ -1,6 +1,22 @@
-__pycache__
-.vscode
+# byte-compiled
+__pycache__/
+
+# Mac OS
+.DS_Store
+
+# VScode
+.vscode/
+
+# IntelliJ
+.idea/
+
+# virtual envs
+venv*
+
+# temporary files
 tmp*
+
+# miscellaneous run files
 *slurm*
 *.job
 *_c_*.csv
