@@ -7,32 +7,65 @@ import pandas as pd
 import pylibxc
 
 
-def get_density(r_s):
-  """ Obtains density n from r_s."""
+def get_density(r_s: np.ndarray) -> np.ndarray:
+  """Obtains densities, n, from Wigner-Seitz radii, r_s.
+  
+  Args:
+    r_s: Wigner-Seitz radii on a grid with shape (num_r_s_points,).
+  
+  Returns:
+    n: densities on a grid with shape (num_r_s_points,).
+  """
 
   return 3 / (4 * np.pi * (r_s**3))
 
 
-def hartree_to_mRy(energy):
-  """ Hartree to mRy units conversion."""
+def hartree_to_mRy(energy: float) -> float:
+  """Hartree to mRy units conversion."""
 
   return energy * 2 * 1000
 
 
-def get_eps_x_unif(n):
-  """ Uniform gas exchange energy per particle. """
+def get_eps_x_unif(n: np.ndarray) -> np.ndarray:
+  """Uniform gas exchange energy per particle. 
+  
+  Args:
+    n: densities on a grid with shape (num_density_points,).
+
+  Returns:
+    eps_x_unif: uniform gas exchange energy per particle on a 
+      grid with shape (num_density_points,).
+  """
 
   return -(3 / (4 * np.pi)) * ((n * 3 * np.pi**2)**(1 / 3))
 
 
-def get_grad_n(s, n):
-  """ Obtain |\nabla n| from reduced gradient, s. """
+def get_grad_n(s: np.ndarray, n: np.ndarray) -> np.ndarray:
+  """Obtain |\nabla n| from reduced gradient, s. 
+  
+  Args:
+    s: reduced density gradient on a grid with shape (num_density_points,).
+    n: densities on a grid with shape (num_density_points,).
+
+  Returns:
+    grad_n: |\nabla n| on a grid with shape (num_density_points,).
+  """
 
   return s * (2 * ((3 * np.pi**2)**(1 / 3)) * (n**(4 / 3)))
 
 
-def get_up_dn_density(n, zeta):
-  """Obtains [n_up, n_dn] from density n and relative spin polarization zeta."""
+def get_up_dn_density(n: np.ndarray, zeta: np.ndarray) -> np.ndarray:
+  """Obtains up- and down-spin densities
+
+  Params:
+    n: real-space density on a grid with shape (num_density_points,).
+    zeta: relative spin polarization on a grid with shape 
+      (num_density_points,).
+  
+  Returns:
+    up_dn_density: up and down density on a grid with shape 
+      (num_density_points, 2)
+  """
 
   n = np.expand_dims(n, axis=1)
   zeta = np.expand_dims(zeta, axis=1)
@@ -44,22 +77,45 @@ def get_up_dn_density(n, zeta):
   return np.concatenate((up_density, dn_density), axis=1)
 
 
-def zeta_coeffs(zeta):
-  """ Coefficients relating n_sigma to zeta."""
+def zeta_coeffs(zeta: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+  """Coefficients relating n_sigma to zeta."""
 
   return (1 + zeta) / 2, (1 - zeta) / 2
 
 
-def get_tau(alpha, grad_n, n, zeta):
-  """ Obtains [tau_up, tau_dn] where 
+def get_tau(
+    alpha: np.ndarray,
+    grad_n: np.ndarray,
+    n: np.ndarray,
+    zeta: np.ndarray,
+) -> np.ndarray:
+  """Obtains up- and down- kinetic energy densities, tau 
+
+  Kinetic energy density:
   tau_sigma = 1/2 \sum_i^occ |\nabla \phi_{sigma i}|^2 .
+  
+  For the uniform gas:
+  tau_unif = 3/10 * (3 pi^2)^2/3 * n^{5/3} .
+
+  The von Weizsacker kinetic energy density is given by:
+  tau_vw = 1/8 * |\nabla n|^2 / n .
+
+  Args:
+    alpha: (tau - tau_vw) / tau_unif. On a grid with shape (num_density_points,).
+    grad_n: |\nabla n| on a grid with shape (num_density_points,).
+    n: densities on a grid with shape (num_density_points,).
+    zeta: relative spin polarization on a grid with shape (num_density_poitns,).
+
+  Returns:
+    tau: up- and down- kinetic energy densities on a grid with shape 
+      (num_density_points, 2)
   """
 
-  tau_w = (grad_n**2) / (8 * n)
+  tau_vw = (grad_n**2) / (8 * n)
   tau_unif = (3 / 10) * ((3 * np.pi**2)**(2 / 3)) * (n**(5 / 3))
   d_s = ((1 + zeta)**(5 / 3) + (1 - zeta)**(5 / 3)) / 2
   tau_unif *= d_s
-  tau = (alpha * tau_unif) + tau_w
+  tau = (alpha * tau_unif) + tau_vw
 
   up_coeff, dn_coeff = (
       np.expand_dims(coeff, axis=1) for coeff in zeta_coeffs(zeta))
@@ -69,9 +125,18 @@ def get_tau(alpha, grad_n, n, zeta):
   return tau
 
 
-def get_sigma(grad_n, zeta):
-  """ Obtains [\nabla n_up * \nabla n_up, \nabla n_up * \nabla n_dn, 
-    \nabla n_dn * \nabla n_dn] .
+def get_sigma(grad_n: np.ndarray, zeta: np.ndarray) -> np.ndarray:
+  """Obtains contracted density gradients.
+
+  Args: 
+    grad_n: |\nabla n| on a grid with shape (num_density_points,).
+    zeta: relative spin polarization on a grid with shape 
+      (num_density_points,).
+  
+  Returns:
+    sigma: density gradients, [[\nabla n_up * \nabla n_up, 
+      \nabla n_up * \nabla n_dn, \nabla n_dn * \nabla n_dn], ...] with 
+      shape (num_density_points, 3).
   """
 
   sigma = np.expand_dims(grad_n**2, axis=1)
@@ -86,9 +151,17 @@ def get_sigma(grad_n, zeta):
   return sigma
 
 
-def get_lapl(q, n, zeta):
-  """ Obtains laplacian [\nabla^2 n_up, \nabla^2 n_dn]. 
-  q is reduced density Laplacian. Eq. 14 in PhysRevA.96.052512 .
+def get_lapl(q: np.ndarray, n: np.ndarray, zeta: np.ndarray) -> np.ndarray:
+  """Obtains density laplacians.
+
+  Args:
+    q: reduced density Laplacian (Eq. 14 in PhysRevA.96.052512) with shape 
+      (num_density_points,).
+    n: densities on a grid with shape (num_density_points,).
+    zeta: relative spin polarization on a grid with shape (num_density_points,).
+
+  Returns:
+    lapl: up- and down- density laplacians with shape (num_density_points, 2). 
   """
 
   n = np.expand_dims(n, axis=1)
@@ -103,9 +176,24 @@ def get_lapl(q, n, zeta):
   return np.concatenate((up_lapl, dn_lapl), axis=1)
 
 
-def lda_xc(func_c, r_s, zeta):
-  """ Obtains correlation energy per particle for LDA-type functionals: 
-  \epsilon_c^{LDA}(r_s, \zeta) .
+def lda_xc(
+    libxc_fun: pylibxc.LibXCFunctional,
+    r_s: np.ndarray,
+    zeta: np.ndarray,
+) -> np.ndarray:
+  """Obtains (exchange)-correlation (X)C energy per particle for 
+  local density approximation (LDA) functionals.
+
+  \epsilon_(x)c^{LDA}(r_s, \zeta)
+  
+  Args:
+    libxc_fun: Libxc functional object.
+    r_s: Wigner-Seitz radii on a grid with shape (mesh_shape,).
+    zeta: relative spin polarization on a grid with shape (mesh_shape,).
+  
+  Returns:
+    eps_xc: (X)C energy per particle on a grid with shape
+      (mesh_shape,).
   """
 
   mesh_shape = r_s.shape
@@ -120,15 +208,32 @@ def lda_xc(func_c, r_s, zeta):
   inp = {}
   inp["rho"] = rho
 
-  func_c_res = func_c.compute(inp)
-  eps_c = np.squeeze(func_c_res['zk'])
+  libxc_fun_res = libxc_fun.compute(inp)
+  eps_xc = np.squeeze(libxc_fun_res['zk'])
 
-  return eps_c.reshape(mesh_shape)
+  return eps_xc.reshape(mesh_shape)
 
 
-def gga_xc(func_c, r_s, s, zeta):
-  """ Obtains correlation energy per particle for GGA-type functionals:
-  \epsilon_c^{GGA}(r_s, s, \zeta, \alpha) .
+def gga_xc(
+    libxc_fun: pylibxc.LibXCFunctional,
+    r_s: np.ndarray,
+    s: np.ndarray,
+    zeta: np.ndarray,
+) -> np.ndarray:
+  """Obtains (X)C energy per particle for generalized gradient approximation
+  (GGA) functionals.
+
+  \epsilon_(x)c^{GGA}(r_s, s, \zeta, \alpha)
+
+  Args:
+    libxc_fun: Libxc functional object.
+    r_s: Wigner-Seitz radii on a grid with shape (mesh_shape,).
+    s: reduced density gradients on a grid with shape (mesh_shape,).
+    zeta: relative spin polarization on a grid with shape (mesh_shape,).
+
+  Returns:
+    eps_xc: (X)C energy per particle on a grid with 
+      shape (mesh_shape,).
   """
 
   mesh_shape = r_s.shape
@@ -146,17 +251,34 @@ def gga_xc(func_c, r_s, s, zeta):
   inp["rho"] = rho
   inp["sigma"] = sigma
 
-  func_c_res = func_c.compute(inp)
-  eps_c = np.squeeze(func_c_res['zk'])
+  libxc_fun_res = libxc_fun.compute(inp)
+  eps_xc = np.squeeze(libxc_fun_res['zk'])
 
-  return eps_c.reshape(mesh_shape)
+  return eps_xc.reshape(mesh_shape)
 
 
-def mgga_xc(func_c, r_s, s, zeta, alpha, q=None):
-  """ Obtains correlation energy per particle for MGGA-type functionals 
-  (without laplacian):
+def mgga_xc(
+    libxc_fun: pylibxc.LibXCFunctional,
+    r_s: np.ndarray,
+    s: np.ndarray,
+    zeta: np.ndarray,
+    alpha: np.ndarray,
+) -> np.ndarray:
+  """Obtains (X)C energy per particle for meta-GGA (MGGA) functionals 
+  (without laplacian).
   
   \epsilon_c^{MGGA}(r_s, s, \zeta, \alpha) .
+  
+  Args:
+    libxc_fun: Libxc functional object.
+    r_s: Wigner-Seitz radii on a grid with shape (mesh_shape,).
+    s: reduced density gradients on a grid with shape (mesh_shape,).
+    zeta: relative spin polarization on a grid with shape (mesh_shape,).
+    alpha: (tau - tau_vw) / tau_unif. On a grid with shape (mesh_shape,). 
+
+  Returns:
+    eps_xc: (X)C energy per particle on a grid with 
+      shape (mesh_shape,).
   """
 
   mesh_shape = r_s.shape
@@ -176,17 +298,37 @@ def mgga_xc(func_c, r_s, s, zeta, alpha, q=None):
   inp["sigma"] = sigma
   inp["tau"] = tau
 
-  func_c_res = func_c.compute(inp)
-  eps_c = np.squeeze(func_c_res['zk'])
+  libxc_fun_res = libxc_fun.compute(inp)
+  eps_xc = np.squeeze(libxc_fun_res['zk'])
 
-  return eps_c.reshape(mesh_shape)
+  return eps_xc.reshape(mesh_shape)
 
 
-def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
-  """ Obtains correlation energy per particle for MGGA-type functionals 
-  with laplacian:
+def mgga_xc_lapl(
+    libxc_fun: pylibxc.LibXCFunctional,
+    r_s: np.ndarray,
+    s: np.ndarray,
+    zeta: np.ndarray,
+    alpha: np.ndarray,
+    q: np.ndarray,
+) -> np.ndarray:
+  """Obtains (X)C energy per particle for meta-GGA (MGGA) functionals 
+  with laplacian.
 
   \epsilon_c^{MGGA}(r_s, s, \zeta, \alpha, q) .
+  
+  Args:
+    libxc_fun: Libxc functional object.
+    r_s: Wigner-Seitz radii on a grid with shape (mesh_shape,).
+    s: reduced density gradients on a grid with shape (mesh_shape,).
+    zeta: relative spin polarization on a grid with shape (mesh_shape,).
+    alpha: (tau - tau_vw) / tau_unif. On a grid with shape (mesh_shape,). 
+    q: reduced density Laplacian (Eq. 14 in PhysRevA.96.052512) with shape 
+      (mesh_shape,).
+
+  Returns:
+    eps_xc: (X)C energy per particle on a grid with 
+      shape (mesh_shape,).
   """
 
   mesh_shape = r_s.shape
@@ -208,14 +350,26 @@ def mgga_xc_lapl(func_c, r_s, s, zeta, alpha, q):
   inp["tau"] = tau
   inp["lapl"] = lapl
 
-  func_c_res = func_c.compute(inp)
-  eps_c = np.squeeze(func_c_res['zk'])
+  libxc_fun_res = libxc_fun.compute(inp)
+  eps_xc = np.squeeze(libxc_fun_res['zk'])
 
-  return eps_c.reshape(mesh_shape)
+  return eps_xc.reshape(mesh_shape)
 
 
-def eps_to_enh_factor(inp_mesh, eps_x_c):
-  """ converts \epsilon_(x)c to F_(x)c ."""
+def eps_to_enh_factor(
+    inp_mesh: List[np.ndarray],
+    eps_x_c: np.ndarray,
+) -> np.ndarray:
+  """Convert (X)C energy per particle, \epsilon_(X)C, to enhancement factor, 
+  F_(X)C.
+  
+  Args:
+    inp_mesh: list of input mesh features each with shape (mesh_shape,).
+    eps_x_c: (X)C energy per particle on a grid with shape (mesh_shape,).
+
+  Returns:
+    enh_factor: enhancement factor on a grid with shape (mesh_shape,).
+  """
 
   r_s_mesh = inp_mesh[0]
   n = get_density(r_s_mesh)
@@ -225,11 +379,11 @@ def eps_to_enh_factor(inp_mesh, eps_x_c):
 
 
 def get_dfa_rung(func_id: str) -> Callable:
-  """ Returns the density functional approximation (DFA) type of a 
-  given functional. 
+  """Returns the density functional approximation (DFA) type of a 
+  given libxc functional id string. 
 
   Args:
-    func_id: Libxc functional identifier.
+    func_id: Libxc functional identifier string.
 
   Returns:
     fun: callable dfa_xc function.
@@ -247,11 +401,11 @@ def get_dfa_rung(func_id: str) -> Callable:
     if dfa in func_id:
       return dfa_fun
 
-  return NotImplementedError(f"functional {func_id} not supported.")
+  raise NotImplementedError(f"functional {func_id} not supported.")
 
 
 def is_xc_func(func_id: str) -> bool:
-  """ checks if a given functional is a XC functional than cannot be 
+  """Check if a given functional is a XC functional than cannot be 
   separated in Libxc. 
   """
 
@@ -261,14 +415,30 @@ def is_xc_func(func_id: str) -> bool:
 def get_enh_factor_x_c(
     func_id: str,
     std_inp: List[np.ndarray],
-    xc_func=False,
-):
-  """ obtains enhancement factor for a given functional and input (inp). """
+    xc_func: Optional[bool] = False,
+) -> np.ndarray:
+  """Obtains (X)C enhancement factor for a given functional and input (inp). 
+  
+  If the correlation enhancement factor is requested and the C functional is
+  not available in Libxc, the enhancement factor is obtained from the following
+  "conventional" partitioning:
+
+  \epsilon_c(r_s, ...) = \epsilon_xc(r_s, ...) 
+    - \lim_{\gamma \to \infty} \epsilon_xc(r_s / \gamma, ...) / \gamma 
+
+  Args:
+    func_id: Libxc functional identifier string.
+    std_inp: list of input mesh features each with shape (mesh_shape,).
+    xc_func: whether the functional is a XC functional than cannot be separated 
+      in Libxc.
+
+  Returns:
+    enh_factor: (X)C enhancement factor on a grid with shape (mesh_shape,).
+  """
 
   inp_mesh = np.meshgrid(*std_inp, indexing='ij')
   dfa = get_dfa_rung(func_id)
 
-  # hyb_c_func workaround
   if xc_func and '_c_' in func_id:
     func_id = func_id.replace('_c_', '_xc_')
     func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
@@ -278,12 +448,12 @@ def get_enh_factor_x_c(
     eps_xc = dfa(func_xc, *inp_mesh)
     f_xc = eps_to_enh_factor(inp_mesh, eps_xc)
 
-    # obtain and substract off exchange.
-    # scale: r_s/lambda.
-    inf_lam = 5000
-    scaled_r_s = std_inp[0] / inf_lam
+    # obtain "conventional" partitioning by taking an approximate limit
+    # using \gamma = 5000.
+    inf_gam = 5000
+    scaled_r_s = std_inp[0] / inf_gam
     scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-    eps_x = dfa(func_xc, *scaled_inp_mesh) / inf_lam
+    eps_x = dfa(func_xc, *scaled_inp_mesh) / inf_gam
     f_x = eps_to_enh_factor(inp_mesh, eps_x)
 
     f_c = f_xc - f_x
@@ -294,12 +464,12 @@ def get_enh_factor_x_c(
     if func_xc._needs_laplacian:
       dfa = mgga_xc_lapl
 
-    # obtain and substract off exchange.
-    # scale: r_s/lambda.
-    inf_lam = 5000
-    scaled_r_s = std_inp[0] / inf_lam
+    # obtain "conventional" partitioning by taking an approximate limit
+    # using \gamma = 5000.
+    inf_gam = 5000
+    scaled_r_s = std_inp[0] / inf_gam
     scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-    eps_x = dfa(func_xc, *scaled_inp_mesh) / inf_lam
+    eps_x = dfa(func_xc, *scaled_inp_mesh) / inf_gam
     f_x = eps_to_enh_factor(inp_mesh, eps_x)
     return f_x
   else:
@@ -355,7 +525,8 @@ def check_condition(
     num_blocks: Optional[int] = 100,
     tol: Optional[float] = None,
 ) -> pd.DataFrame:
-  """ Checks if a given condition is met for a given functional and inp. 
+  """Assessment of a given local condition for a given functional and input. 
+  
   If the condition is not met, return min. and max. variables where the 
   condition is not met. The percentage of violations is also returned.
 
@@ -459,7 +630,7 @@ def check_condition(
 
 
 def condition_string_to_fun(condition_string: str) -> Callable:
-  """ get condition function (callable) from identifying string. """
+  """Get condition function (callable) from identifying string. """
 
   try:
     cond_fun = globals()[condition_string]
@@ -476,8 +647,7 @@ def lieb_oxford_bd_check_Uxc(
     tol: Optional[float] = 1e-3,
     lieb_oxford_bd_const: Optional[float] = 2.27,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
-  """ 
-  original Lieb-Oxford bound on Uxc:
+  """Local condition for Lieb-Oxford (LO) bound on U_xc.
 
   F_xc +  r_s (d F_c / dr_s) <= lieb_oxford_bd_const
   """
@@ -513,8 +683,7 @@ def lieb_oxford_bd_check_Exc(
     tol: Optional[float] = 1e-3,
     lieb_oxford_bd_const: Optional[float] = 2.27,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
-  """ 
-  Lieb-Oxford bound on Exc:
+  """Local condition for Lieb-Oxford bound on E_xc:
 
   F_xc <= C 
   """
@@ -551,7 +720,9 @@ def deriv_lower_bd_check(
     r_s_dx: float,
     tol: Optional[float] = 1e-5,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
-  """
+  """Local condition for E_c[n_\gamma] scaling inequalities 
+  (and T_c[n] non-negativity).
+
   0 <= d F_c / dr_s
   """
   # r_s_dx not used in this condition, but included for consistency with other
@@ -582,7 +753,8 @@ def deriv_upper_bd_check_1(
     r_s_dx: float,
     tol: Optional[float] = 1e-3,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
-  """ 
+  """Local condition for the T_c[n] upper bound exact condition.
+
   d F_c / dr_s <= (F_c[r_s->\infty, ...] - F_c[r_s, ...]) / r_s 
   """
 
@@ -617,11 +789,9 @@ def deriv_upper_bd_check_2(
     r_s_dx: float,
     tol: Optional[float] = 5e-4,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
-  """ 
+  """Local condition for the unproven conjectured inequality T_c[n] <= -E_c[n]. 
+
   d F_c / dr_s <= F_c / r_s .
-  
-  Note: sufficient condition to satisfy the unproven conjecture: 
-    T_c[n] <= -E_c[n].
   """
 
   r_s_mesh = std_inp[0]
@@ -652,7 +822,11 @@ def second_deriv_check(
     r_s_dx: float,
     tol: Optional[float] = 1e-3,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
-  """ d^2 F_c / dr_s^2 >= (-2/r_s) d F_c / dr_s . """
+  """Local condition for the concavity exact condition for correlation energy
+  adiabatic connection curves.
+  
+  d^2 F_c / dr_s^2 >= (-2/r_s) d F_c / dr_s  
+  """
 
   r_s_mesh = std_inp[0]
 
@@ -688,7 +862,10 @@ def negativity_check(
     r_s_dx: float,
     tol: Optional[float] = 1e-5,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
-  """ F_c >= 0 ."""
+  """Local condition for the correlation energy negativity exact condition.
+  
+  F_c >= 0 
+  """
 
   # r_s_dx not used in this condition, but included for consistency with other
   # conditions.
