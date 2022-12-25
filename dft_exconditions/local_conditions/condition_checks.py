@@ -513,7 +513,11 @@ def check_condition_work(
     f_x_c = get_enh_factor_x_c(func_id_c, std_inp, xc_func=xc_func)
 
   inp_mesh = np.meshgrid(*std_inp, indexing='ij')
-  result = condition(inp_mesh, f_x_c, r_s_dx, tol)
+
+  if tol is None:
+    result = condition(inp_mesh, f_x_c, r_s_dx)
+  else:
+    result = condition(inp_mesh, f_x_c, r_s_dx, tol)
 
   return result
 
@@ -629,13 +633,35 @@ def check_condition(
   return df
 
 
+def available_conditions() -> Dict[str, Callable]:
+  """Get available conditions dictionary. """
+
+  conditions = {
+      "negativity_check": negativity_check,
+      "deriv_lower_bd_check": deriv_lower_bd_check,
+      "deriv_upper_bd_check_1": deriv_upper_bd_check_1,
+      "deriv_upper_bd_check_2": deriv_upper_bd_check_2,
+      "second_deriv_check": second_deriv_check,
+      "lieb_oxford_bd_check_Uxc": lieb_oxford_bd_check_Uxc,
+      "lieb_oxford_bd_check_Exc": lieb_oxford_bd_check_Exc,
+  }
+
+  return conditions
+
+
 def condition_string_to_fun(condition_string: str) -> Callable:
   """Get condition function (callable) from identifying string. """
 
+  conditions = available_conditions()
+
   try:
-    cond_fun = globals()[condition_string]
+    cond_fun = conditions[condition_string]
   except KeyError:
-    raise NotImplementedError(f"Condition not implemented: {condition_string}")
+    lined_conds = '\n'.join(list(conditions.keys()))
+    raise NotImplementedError(
+        f'Condition not implemented: {condition_string} \n'
+        'Available conditions: \n'
+        f'{lined_conds}')
 
   return cond_fun
 
