@@ -441,11 +441,11 @@ def get_enh_factor_x_c(
 
   if xc_func and '_c_' in func_id:
     func_id = func_id.replace('_c_', '_xc_')
-    func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
-    if func_xc._needs_laplacian:
+    libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
+    if libxc_fun._needs_laplacian:
       dfa = mgga_xc_lapl
 
-    eps_xc = dfa(func_xc, *inp_mesh)
+    eps_xc = dfa(libxc_fun, *inp_mesh)
     f_xc = eps_to_enh_factor(inp_mesh, eps_xc)
 
     # obtain "conventional" partitioning by taking an approximate limit
@@ -453,15 +453,15 @@ def get_enh_factor_x_c(
     inf_gam = 5000
     scaled_r_s = std_inp[0] / inf_gam
     scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-    eps_x = dfa(func_xc, *scaled_inp_mesh) / inf_gam
+    eps_x = dfa(libxc_fun, *scaled_inp_mesh) / inf_gam
     f_x = eps_to_enh_factor(inp_mesh, eps_x)
 
     f_c = f_xc - f_x
     return f_c
   elif xc_func and '_x_' in func_id:
     func_id = func_id.replace('_x_', '_xc_')
-    func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
-    if func_xc._needs_laplacian:
+    libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
+    if libxc_fun._needs_laplacian:
       dfa = mgga_xc_lapl
 
     # obtain "conventional" partitioning by taking an approximate limit
@@ -469,15 +469,15 @@ def get_enh_factor_x_c(
     inf_gam = 5000
     scaled_r_s = std_inp[0] / inf_gam
     scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-    eps_x = dfa(func_xc, *scaled_inp_mesh) / inf_gam
+    eps_x = dfa(libxc_fun, *scaled_inp_mesh) / inf_gam
     f_x = eps_to_enh_factor(inp_mesh, eps_x)
     return f_x
   else:
-    func_xc = pylibxc.LibXCFunctional(func_id, "polarized")
-    if func_xc._needs_laplacian:
+    libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
+    if libxc_fun._needs_laplacian:
       dfa = mgga_xc_lapl
 
-    eps_x_c = dfa(func_xc, *inp_mesh)
+    eps_x_c = dfa(libxc_fun, *inp_mesh)
     f_x_c = eps_to_enh_factor(inp_mesh, eps_x_c)
     return f_x_c
 
@@ -631,6 +631,45 @@ def check_condition(
   df['percent_violated'] = [num_violated / num_checks]
   df = pd.DataFrame.from_dict(df)
   return df
+
+
+def default_input_grid_search(func_id: str) -> Dict[str, np.ndarray]:
+  """Default input for the grid search over a given functional.
+  
+  Args:
+    func_id: LibXC functional identifier.
+
+  Returns:
+    inp: dictionary of input variables. Expected keys are 'r_s', 'zeta', ... 
+      Each key corresponds to a 1D numpy array.
+  """
+
+  libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
+
+  if 'mgga_c_' in func_id or 'mgga_xc_' in func_id:
+    if libxc_fun._needs_laplacian:
+      inp = {
+          'r_s': np.linspace(0.0001, 5, 3000),
+          's': np.linspace(0, 5, 100),
+          'zeta': np.linspace(0, 1, 20),
+          'alpha': np.linspace(0, 5, 10),
+          'q': np.linspace(0, 5, 50),
+      }
+    else:
+      inp = {
+          'r_s': np.linspace(0.0001, 5, 5000),
+          's': np.linspace(0, 5, 100),
+          'zeta': np.linspace(0, 1, 20),
+          'alpha': np.linspace(0, 5, 100),
+      }
+  elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
+    inp = {
+        'r_s': np.linspace(0.0001, 5, 500),
+        's': np.linspace(0, 5, 500),
+        'zeta': np.linspace(0, 1, 100),
+    }
+
+  return inp
 
 
 def available_conditions() -> Dict[str, Callable]:

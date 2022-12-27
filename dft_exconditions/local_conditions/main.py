@@ -2,7 +2,6 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-import pylibxc
 
 from dft_exconditions.local_conditions import condition_checks
 
@@ -47,30 +46,7 @@ def main():
   print(f"running: {func_id}", flush=True)
   print(f"checking condition: {condition_string}", flush=True)
 
-  libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
-
-  if 'mgga_c_' in func_id or 'mgga_xc_' in func_id:
-    if libxc_fun._needs_laplacian:
-      inp = {
-          'r_s': np.linspace(0.0001, 5, 3000),
-          's': np.linspace(0, 5, 100),
-          'zeta': np.linspace(0, 1, 20),
-          'alpha': np.linspace(0, 5, 10),
-          'q': np.linspace(0, 5, 50),
-      }
-    else:
-      inp = {
-          'r_s': np.linspace(0.0001, 5, 5000),
-          's': np.linspace(0, 5, 100),
-          'zeta': np.linspace(0, 1, 20),
-          'alpha': np.linspace(0, 5, 100),
-      }
-  elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
-    inp = {
-        'r_s': np.linspace(0.0001, 5, 500),
-        's': np.linspace(0, 5, 500),
-        'zeta': np.linspace(0, 1, 100),
-    }
+  inp = condition_checks.default_input_grid_search(func_id)
 
   df = condition_checks.check_condition(
       func_id,
