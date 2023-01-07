@@ -1,5 +1,6 @@
-import pytest
+from typing import Tuple
 
+import pytest
 import numpy as np
 from pyscf import gto, dft
 
@@ -35,12 +36,22 @@ test_gams = [np.linspace(0.01, 2)]
 @pytest.mark.parametrize('func_ids', test_xcs)
 @pytest.mark.parametrize('mol', test_mols)
 @pytest.mark.parametrize('gams', test_gams)
-def test_ec_consistency(func_ids, mol, gams):
-  """Test different ways of obtaining Ec:
-    1) From explicit corr. functional.
-    2) By taking the limit definition for Ex.
-    
-    We should obtain same result from either 1) or 2).
+def test_ec_consistency(
+    func_ids: Tuple[str, str],
+    mol: gto.M,
+    gams: np.ndarray,
+):
+  """Test different ways of obtaining correlation energies (Ec) are consistent.
+
+  1) From explicit corr. functional.
+  2) By taking the limit definition for Ex.
+  
+  We should obtain same result from either 1) or 2).
+
+  Args:
+    func_ids: Tuple, (Pyscf xc functional id, Pyscf corr. functional id)
+    mol: PySCF molecule object
+    gams: gamma values to test with shape (num_gam_points,)
   """
 
   xc, c = func_ids
@@ -66,8 +77,14 @@ def test_ec_consistency(func_ids, mol, gams):
 @pytest.mark.parametrize('func_ids', test_xcs[2:])
 @pytest.mark.parametrize('mol', test_mols)
 @pytest.mark.parametrize('gams', test_gams)
-def test_exact_conds(func_ids, mol, gams):
-  """Test that the exact conditions are satisfied for a given xc functional."""
+def test_exact_conds(func_ids: Tuple[str, str], mol: gto.M, gams: np.ndarray):
+  """Test that the exact conditions are satisfied for test xc functionals.
+  
+  Args:
+      func_ids: Tuple, (xc functional , corr. functional)
+      mol: PySCF molecule object
+      gams: gamma values to test with shape (num_gam_points,)  
+  """
 
   xc = func_ids[0]
 

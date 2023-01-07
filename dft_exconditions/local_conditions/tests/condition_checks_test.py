@@ -44,8 +44,14 @@ test_inp = {
 
 @pytest.mark.parametrize('func_id, condition_string, expected',
                          test_local_conditions_data)
-def test_local_conditions(func_id, condition_string, expected):
-  """Test local conditions and check with reference values."""
+def test_local_conditions(func_id: str, condition_string: str, expected: float):
+  """Test local conditions and check with reference values.
+  
+  Args:
+    func_id: Libxc functional ID.
+    condition_string: Local condition string to check.
+    expected: Expected fraction of tested points violating the condition.
+  """
 
   if 'mgga_' in func_id:
     test_inp['alpha'] = np.linspace(0, 5, 5)
