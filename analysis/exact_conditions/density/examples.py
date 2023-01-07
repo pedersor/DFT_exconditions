@@ -1,8 +1,5 @@
-import sys
+from typing import Callable, Tuple
 import functools
-
-sys.path.append('../../')
-sys.path.append('../../../')
 
 import pylibxc
 import matplotlib.pyplot as plt
@@ -13,31 +10,31 @@ from scipy.optimize import fsolve
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
-from dft_exconditions.exact_conds import CondChecker
+from dft_exconditions.exact_conditions.exact_conds import CondChecker
 from dft_exconditions import utils
 
-pi = np.pi
+PI = np.pi
 
 
 class GedankenDensity():
 
   def radial_reduced_grad_dist(
-      grids,
-      n,
-      n_grad,
-      s_grids=np.linspace(0, 3, num=1000),
+      grids: np.ndarray,
+      n: np.ndarray,
+      n_grad: np.ndarray,
+      s_grids: np.ndarray = np.linspace(0, 3, num=1000),
       fermi_temp=0.05,
       density_tol=1e-6,
   ):
-    """ Obtain distribution of the reduced gradient, g(s) as defined in:
+    """Obtain distribution of the reduced gradient, g(s). 
+    
+    g(s) is defined in:
       
-      Zupan, Ales, et al. "Density-gradient analysis for density functional 
-      theory: Application to atoms." International journal of quantum chemistry 
-      61.5 (1997): 835-845.
-
-      https://doi.org/10.1002/(SICI)1097-461X(1997)61:5<835::AID-QUA9>3.0.CO;2-X
-      
-      """
+    Zupan, Ales, et al. "Density-gradient analysis for density functional 
+    theory: Application to atoms." International journal of quantum chemistry 
+    61.5 (1997): 835-845.
+    https://doi.org/10.1002/(SICI)1097-461X(1997)61:5<835::AID-QUA9>3.0.CO;2-X
+    """
 
     dx = (grids[-1] - grids[0]) / (len(grids) - 1)
     s_grids = np.expand_dims(s_grids, axis=1)
@@ -59,28 +56,28 @@ class GedankenDensity():
 
     return s_grids, g_s
 
-  def num_deriv_fn(arr, grids):
-    """ Numerical 1st derivative of arr on grids."""
+  def num_deriv_fn(arr: np.ndarray, grids: np.ndarray) -> np.ndarray:
+    """Numerical 1st derivative of arr on grids."""
     dx = (grids[-1] - grids[0]) / (len(grids) - 1)
     deriv = np.gradient(arr, dx, edge_order=2, axis=0)
     return deriv
 
-  def num_deriv2_fn(arr, grids):
-    """ Numerical 2nd derivative of arr on grids."""
+  def num_deriv2_fn(arr: np.ndarray, grids: np.ndarray) -> np.ndarray:
+    """Numerical 2nd derivative of arr on grids."""
     dx = (grids[-1] - grids[0]) / (len(grids) - 1)
     deriv2 = np.diff(arr, 2, axis=0) / (dx**2)
     return deriv2
 
   def gedanken_density(
-      gamma,
-      r_s_min,
-      r_s_max,
-      s_target,
-      num_peaks,
-      smoothing_factor,
-      base_grid_pts=1000,
-      num_elec=2,
-  ):
+      gamma: float,
+      r_s_min: float,
+      r_s_max: float,
+      s_target: float,
+      num_peaks: int,
+      smoothing_factor: float,
+      base_grid_pts: int = 1000,
+      num_elec: int = 2,
+  ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
 
     # desired max and min density values and max \grad n value
     # in oscillating region.
@@ -99,12 +96,18 @@ class GedankenDensity():
     grids = np.linspace(0, 3 * osc_len, num=3 * base_grid_pts)
     grids_1, grids_2 = np.split(grids, [base_grid_pts])
 
-    def osc_density(grids, offset, amp, eta, period):
-      """ Oscillatory region of the density. """
+    def osc_density(
+        grids: np.ndarray,
+        offset: float,
+        amp: float,
+        eta: float,
+        period: float,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+      """Oscillatory region of the density. """
 
-      theta = (1 / period) * 2 * pi * (grids + (period / 4))
+      theta = (1 / period) * 2 * PI * (grids + (period / 4))
 
-      osc_density = offset - amp * np.arccos((1 - eta) * np.sin(theta)) / pi
+      osc_density = offset - amp * np.arccos((1 - eta) * np.sin(theta)) / PI
       deriv_osc_density_1 = 2 * amp * (1 - eta) * np.cos(theta)
       deriv_osc_density_2 = period * np.sqrt(1 -
                                              (1 - eta)**2 * np.sin(theta)**2)
@@ -114,12 +117,19 @@ class GedankenDensity():
 
     n_osc, grad_n_osc = osc_density(grids_1, offset, amp, eta, period)
 
-    def decay_tail(grids, x, y, y_prime, y_2prime):
-      """ decay tail f(x) = c e^(a x^2 + b x) with f(x) = y, f'(x) = y', 
-      and f''(x) = y'' """
+    def decay_tail(
+        grids: np.ndarray,
+        x: float,
+        y: float,
+        y_prime: float,
+        y_2prime: float,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+      """Decay tail f(x) = c e^(a x^2 + b x) with f(x) = y, f'(x) = y', 
+      and f''(x) = y'' .
+      """
 
       def non_linear_eqs(inp):
-        """ Solve set of non-linear equations to obtain decay tail parameters 
+        """Solve set of non-linear equations to obtain decay tail parameters 
         by ensuring continuity of 0th, 1st, and 2nd derivatives. """
 
         a, b, c = inp
@@ -198,18 +208,18 @@ class GedankenDensity():
     n_g_grad *= gamma**4
 
     # normalize to num_elec
-    norm = 4 * pi * np.trapz(n_g * (grids**2), grids)
+    norm = 4 * PI * np.trapz(n_g * (grids**2), grids)
     n_g *= num_elec / norm
     n_g_grad *= num_elec / norm
 
-    # TODO? report parameters used
+    # TODO: report parameters used
 
     return grids, n_g, n_g_grad
 
-  def default_gedanken_density():
-    """ Default gedanken density parameters. 
+  def default_gedanken_density() -> Callable:
+    """Default gedanken density parameters. 
   
-    Returns: callable gedanken density (gamma).
+    Returns: callable, gedanken_density(gamma).
     """
     density = functools.partial(
         GedankenDensity.gedanken_density,
@@ -221,26 +231,30 @@ class GedankenDensity():
     )
     return density
 
-  def get_e_xc(xc, gamma):
-    """ Return E_xc[n^gedanken_\gamma] for a given XC functional. """
+  def get_e_xc(func_id: str, gamma: float) -> np.ndarray:
+    """Return E_xc[n^gedanken_\gamma] for a given XC functional. """
 
     gdn_density = GedankenDensity.default_gedanken_density()
     grids, n_g, n_g_grad = gdn_density(gamma=gamma)
 
-    func = pylibxc.LibXCFunctional(xc, "unpolarized")
+    func = pylibxc.LibXCFunctional(func_id, "unpolarized")
     inp = {}
     inp["rho"] = n_g
     inp["sigma"] = n_g_grad**2
     eps_xc = func.compute(inp)
     eps_xc = np.squeeze(eps_xc['zk'])
 
-    # check normalization
-    int_check = 4 * pi * np.trapz(n_g * (grids**2), grids)
-    e_xc = 4 * pi * np.trapz(eps_xc * n_g * (grids**2), grids)
+    e_xc = 4 * PI * np.trapz(eps_xc * n_g * (grids**2), grids)
 
     return e_xc
 
-  def gedanken_g_s():
+  def gedanken_g_s() -> Tuple[np.ndarray, np.ndarray]:
+    """Gedanken density g(s) on a grid.
+    
+    Returns: Tuple, (s_grids, g_s), where g_s is the g(s) function on a grid of 
+      s values, s_grids.
+    """
+
     density = GedankenDensity.default_gedanken_density()
 
     grids, n_g, n_g_grad = density(gamma=1)
@@ -274,7 +288,7 @@ class GedankenDensity():
     plt.close()
 
   def plot_gedanken_ks_potential():
-    """ Calculate the KS potential for a one- or two-electron (singlet) 
+    """Plot the KS potential for a one- or two-electron (singlet) 
     radial gedanken density. 
     
     Obtained from direct inversion of the radial KS equation:
@@ -326,9 +340,12 @@ class GedankenDensity():
 
 class Examples():
 
+  # radial grids for plotting
   s_grids = np.linspace(0, 5, num=1000)
 
-  def he_atom_radial_density():
+  def he_atom_radial_density() -> Tuple[np.ndarray, np.ndarray]:
+    """Radial density of a He atom calculated with PySCF."""
+
     atom = gto.M(
         atom='He 0 0 0',
         basis='aug-pcseg-4',
@@ -356,7 +373,8 @@ class Examples():
 
     return radial_grids, radial_density
 
-  def he_atom_g_s():
+  def he_atom_g_s() -> Tuple[np.ndarray, np.ndarray]:
+    """g(s) of a He atom calculated with PySCF."""
 
     atom = gto.M(
         atom='He 0 0 0',
@@ -385,7 +403,8 @@ class Examples():
 
     return s_grids, g_s
 
-  def n_atom_g_s():
+  def n_atom_g_s() -> Tuple[np.ndarray, np.ndarray]:
+    """g(s) of a N atom calculated with PySCF."""
 
     n_atom = gto.M(
         atom='N 0 0 0',
@@ -411,7 +430,8 @@ class Examples():
 
     return s_grids, g_s
 
-  def n2_mol_g_s():
+  def n2_mol_g_s() -> Tuple[np.ndarray, np.ndarray]:
+    """g(s) of a N_2 molecule calculated with PySCF."""
 
     n2_mol = gto.M(
         atom='N 0 0 0;N 0 0 1.09',
@@ -429,7 +449,9 @@ class Examples():
 
     return s_grids, g_s
 
-  def ar_atom_g_s():
+  def ar_atom_g_s() -> Tuple[np.ndarray, np.ndarray]:
+    """g(s) of an Ar atom calculated with PySCF."""
+
     ar_atom = gto.M(
         atom='Ar 0 0 0',
         basis='aug-pcseg-4',
@@ -447,6 +469,7 @@ class Examples():
     return s_grids, g_s
 
   def combined_examples():
+    """Combine all examples into one plot."""
 
     n_out = Examples.n_atom_g_s()
     he_out = Examples.he_atom_g_s()
@@ -477,7 +500,7 @@ class Examples():
 
 
 if __name__ == '__main__':
-  """ Obtain plots and results for the paper. """
+  """Obtain plots and results for the paper. """
 
   utils.use_standard_plotting_params()
 
