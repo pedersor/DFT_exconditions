@@ -17,6 +17,8 @@ class PyscfEvaluator():
       scf_args: List[dict, str] = [{}],
   ):
     """
+    Initialize PyscfEvaluator.
+
     Args:
       xc: functional id string.
       hf: whether to run HF calculation.

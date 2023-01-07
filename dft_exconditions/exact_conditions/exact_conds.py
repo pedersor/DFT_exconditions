@@ -1,15 +1,30 @@
+from typing import Tuple, Union, List, Optional, Dict
 import copy
 
 import numpy as np
-from pyscf import gto, dft, lib, cc, scf
+from pyscf import dft, scf
 from pyscf.dft import numint, libxc
 from scipy.stats import linregress
 
 
 class CondChecker():
-  """ check conditions on self-consistent densities. """
+  """Check exact conditions on given densities. """
 
-  def __init__(self, mf, xc=None, gams=np.linspace(0.01, 2)):
+  def __init__(
+      self,
+      mf: Union[scf.RHF, scf.UHF, dft.RKS, dft.UKS],
+      xc: Optional[str] = None,
+      gams: Optional[np.ndarray] = np.linspace(0.01, 2),
+  ):
+    """
+    Initialize CondChecker object.
+
+    Args:
+      mf: pyscf scf or dft object.
+      xc: functional id string.
+      gams: array of gammas to check.
+    """
+
     self.mf = mf
     self.gams = gams
     self.mol = mf.mol
@@ -65,8 +80,8 @@ class CondChecker():
   def set_cache(self, s: str, obj) -> None:
     self._caches[s] = obj
 
-  def get_reduced_grad(self):
-    """ Obtain reduced gradient: s(r). """
+  def get_reduced_grad(self) -> np.ndarray:
+    """Obtain reduced gradient on a grid. """
 
     rho = self.rho
     if self.unrestricted:
@@ -85,15 +100,25 @@ class CondChecker():
       s_grids=np.linspace(0, 3, num=1000),
       fermi_temp=0.05,
       density_tol=1e-9,
-  ):
-    """ Obtain distribution of the reduced gradient, g_3(s) as defined in:
+  ) -> Tuple[np.ndarray, np.ndarray]:
+    """Obtain distribution of the reduced gradient, g_3(s). 
+    
+    g_3(s) is defined in:
     
     Zupan, Ales, et al. "Density‐gradient analysis for density functional 
     theory: Application to atoms." International journal of quantum chemistry 
     61.5 (1997): 835-845.
-
     https://doi.org/10.1002/(SICI)1097-461X(1997)61:5<835::AID-QUA9>3.0.CO;2-X
-    
+
+    Args:
+      s_grids: grid of s values to evaluate g_3(s) on.
+      fermi_temp: artificial temperature for fermi broadening of a step 
+        function.
+      density_tol: ignore densities values below this tolerance.
+
+    Returns:
+      s_grids: grid of s values.
+      g3_s: g_3(s) evaluated on s_grids.
     """
 
     rho = self.rho
@@ -105,7 +130,7 @@ class CondChecker():
     s_grids = np.expand_dims(s_grids, axis=1)
     s = self.get_reduced_grad()
 
-    # avoid numerical problems
+    # avoid numerical problems from small density values
     mask = n > density_tol
     n = n[mask]
     s = s[mask]
@@ -121,8 +146,8 @@ class CondChecker():
 
     return s_grids, g3_s
 
-  def get_scaled_sys(self, gam):
-
+  def get_scaled_sys(self, gam: float) -> Tuple[np.ndarray, np.ndarray]:
+    """Scale density and quadrature weights by \gamma."""
     if not self.unrestricted:
       scaled_rho = self.get_scaled_rho(self.rho, gam)
     else:
@@ -137,7 +162,7 @@ class CondChecker():
     return scaled_rho, scaled_weights
 
   @staticmethod
-  def get_scaled_rho(rho, gam):
+  def get_scaled_rho(rho: np.ndarray, gam: float) -> np.ndarray:
     """ Scale density: \gamma^3 n(\gamma \br) ."""
 
     # create a copy to prevent modifying the original density
@@ -149,7 +174,21 @@ class CondChecker():
 
     return scaled_rho
 
-  def get_Ec_gam(self, gam, gam_inf=5000):
+  def get_Ec_gam(self, gam: float, gam_inf=5000) -> float:
+    """Obtain the correlation energy E_c[n_\gamma].
+    
+    If self.c is None, then E_c[n_\gamma] is obtained by
+    the conventional definition by taking the limit: 
+
+    E_c[n] = E_xc[n] - \lim_{gamma \to \infty} E_xc[n_gamma] / gamma
+
+    Args:
+      gam: gamma value to evaluate E_c[n_\gamma] on.
+      gam_inf: large gamma value for the limit in the definition above.
+
+    Returns:
+      ec: correlation energy E_c[n_\gamma].
+    """
 
     if self.c is None:
       # E_x = \lim_{gamma \to \infty} E_xc[n_gamma] / gamma
@@ -160,7 +199,8 @@ class CondChecker():
 
     return ec
 
-  def get_Ec_gams(self, gams):
+  def get_Ec_gams(self, gams: np.ndarray) -> np.ndarray:
+    """Obtain correlation energy E_c[n_\gamma] for an array of gamma values."""
 
     if self.get_cache('Ec_gams') is not None and np.array_equal(
         gams, self.gams):
@@ -173,8 +213,8 @@ class CondChecker():
       self.set_cache('Ec_gams', ec_gams)
     return ec_gams
 
-  def get_Ex_lda(self, gam):
-    """ Obtain unpolarized LDA exchange energy. """
+  def get_Ex_lda(self, gam: float) -> float:
+    """Obtain unpolarized LDA exchange energy for a given gamma."""
 
     scaled_rho, scaled_weights = self.get_scaled_sys(gam)
     if self.unrestricted:
@@ -191,7 +231,8 @@ class CondChecker():
 
     return ex
 
-  def get_Ex_lda_gams(self, gams):
+  def get_Ex_lda_gams(self, gams: np.ndarray) -> np.ndarray:
+    """Obtain LDA exchange energy for an array of gamma values."""
 
     if self.get_cache('Ex_lda_gams') is not None and np.array_equal(
         gams, self.gams):
@@ -204,7 +245,17 @@ class CondChecker():
       self.set_cache('Ex_lda_gams', ex_gams)
     return ex_gams
 
-  def get_Exc_gam(self, gam, xc):
+  def get_Exc_gam(self, gam: float, xc: str) -> float:
+    """Obtain exchange-correlation energy E_xc[n_\gamma] for a given
+    gamma value.
+    
+    Args:
+      gam: gamma value to evaluate E_xc[n_\gamma] on.
+      xc: exchange-correlation functional id.
+    
+    Returns:
+      exc: exchange-correlation energy E_xc[n_\gamma].
+    """
 
     scaled_rho, scaled_weights = self.get_scaled_sys(gam)
     eps_xc = dft.libxc.eval_xc(xc, scaled_rho, spin=self.unrestricted)[0]
@@ -230,13 +281,16 @@ class CondChecker():
 
     return exc
 
-  def get_Exc_gams(self, gams):
+  def get_Exc_gams(self, gams: np.ndarray) -> np.ndarray:
+    """Obtain exchange-correlation energy E_xc[n_\gamma] for an array of
+    gamma values."""
+
     exc_gams = np.array([self.get_Exc_gam(gam, self.xc) for gam in gams])
     return exc_gams
 
   @staticmethod
-  def grid_spacing(arr):
-    """ Get uniform spacing of gammas. """
+  def grid_spacing(arr: np.ndarray) -> float:
+    """Get uniform spacing of arr grid. """
     dx = arr[1] - arr[0]
     dx_alt = (arr[-1] - arr[0]) / (len(arr) - 1)
     np.testing.assert_allclose(
@@ -246,21 +300,20 @@ class CondChecker():
     )
     return dx
 
-  def deriv_fn(self, arr, grids):
+  def deriv_fn(self, arr: np.ndarray, grids: np.ndarray) -> np.ndarray:
     """ Numerical 1st derivative of arr on grids."""
     dx = self.grid_spacing(grids)
     deriv = np.gradient(arr, dx, edge_order=2, axis=0)
     return deriv
 
-  def deriv2_fn(self, arr, grids):
+  def deriv2_fn(self, arr: np.ndarray, grids: np.ndarray) -> np.ndarray:
     """ Numerical 2nd derivative of arr on grids."""
     dx = self.grid_spacing(grids)
     deriv2 = np.diff(arr, 2, axis=0) / (dx**2)
     return deriv2
 
-  ## Exact conditions
-
-  def ec_non_positivity(self, tol=5e-6):
+  def ec_non_positivity(self, tol=5e-6) -> bool:
+    """Check if E_c[n_\gamma] is non-negative for all gamma values."""
 
     ec_gams = self.get_Ec_gams(self.gams)
 
@@ -269,7 +322,8 @@ class CondChecker():
 
     return cond
 
-  def ec_scaling_check(self, tol=5e-6):
+  def ec_scaling_check(self, tol=5e-6) -> bool:
+    """Check E_c[n_\gamma] scaling inequalities."""
 
     ec = self.get_Ec_gam(1)
 
@@ -291,7 +345,14 @@ class CondChecker():
 
     return cond_s and cond_l
 
-  def tc_non_negativity(self, tol=5e-6, end_pt_skip=3):
+  def tc_non_negativity(self, tol=5e-6, end_pt_skip: int = 3) -> bool:
+    """Check if T_c[n_\gamma] is non-negative for all gamma values.
+    
+    Args:
+      tol: numerical tolerance for condition.
+      end_pt_skip: Skip a number of end points in the array T_c[n_\gamma]
+        to avoide inaccurate numerical derivatives.
+    """
 
     ec_gams = self.get_Ec_gams(self.gams)
     ec_deriv = self.deriv_fn(ec_gams, self.gams)
@@ -305,9 +366,18 @@ class CondChecker():
   def tc_upper_bound(
       self,
       tol=5e-4,
-      end_pt_skip=3,
-      zero_gams=None,
-  ):
+      end_pt_skip: int = 3,
+      zero_gams: np.ndarray = None,
+  ) -> bool:
+    """Check if the T_c[n_\gamma] upper bound condition. 
+    
+    Args:
+      tol: numerical tolerance for condition.
+      end_pt_skip: Skip a number of end points in the array T_c[n_\gamma]
+        to avoide inaccurate numerical derivatives.
+      zero_gams: Array of gamma values to use to extrapolate the value 
+        T_c[n_{\gamma -> 0}].    
+    """
 
     ec_gams = self.get_Ec_gams(self.gams)
     ec_deriv = self.deriv_fn(ec_gams, self.gams)
@@ -342,7 +412,19 @@ class CondChecker():
 
     return cond
 
-  def adiabatic_ec_concavity(self, tol=5e-6, end_pt_skip=3):
+  def adiabatic_ec_concavity(
+      self,
+      tol=5e-6,
+      end_pt_skip: int = 3,
+  ) -> bool:
+    """Check whether the concavity condition for adiabatic connection 
+    E^{\lambda}_c[n] holds.
+    
+    Args:
+      tol: numerical tolerance for condition.
+      end_pt_skip: Skip a number of end points in the array 
+        to avoide inaccurate numerical derivatives.
+    """
 
     ec_invgams = self.get_Ec_gams(1 / self.gams)
     cond = self.deriv2_fn((self.gams**2) * ec_invgams, self.gams)
@@ -351,7 +433,20 @@ class CondChecker():
 
     return cond
 
-  def lieb_oxford_bound_uxc(self, tol=5e-6, lob_coeff=2.27, end_pt_skip=3):
+  def lieb_oxford_bound_uxc(
+      self,
+      tol=5e-6,
+      lob_coeff=2.27,
+      end_pt_skip: int = 3,
+  ) -> bool:
+    """Check whether the Lieb-Oxford bound for U_xc holds.
+    
+    Args:
+      tol: numerical tolerance for condition.
+      lob_coeff: The Lieb-Oxford bound (lob) coefficient to use.
+      end_pt_skip: Skip a number of end points in the array to avoid
+        inaccurate numerical derivatives.
+    """
 
     ec_gams = self.get_Ec_gams(self.gams)
     ec_deriv = self.deriv_fn(ec_gams, self.gams)
@@ -367,6 +462,12 @@ class CondChecker():
     return cond
 
   def lieb_oxford_bound_exc(self, tol=5e-6, lob_coeff=2.27):
+    """ Check the Lieb-Oxford bound for E_xc.
+    
+    Args:
+      tol: numerical tolerance for condition.
+      lob_coeff: The Lieb-Oxford bound (lob) coefficient to use.
+    """
 
     # LDA exchange
     ex_lda = self.get_Ex_lda_gams(self.gams)
@@ -378,7 +479,7 @@ class CondChecker():
     return cond
 
   def tc_ec_conjecture(self, tol=5e-6):
-    """ Check the conjecture: T_c[n] <= -E_c[n] ."""
+    """Check the conjecture: T_c[n] <= -E_c[n] ."""
 
     ec_gams = self.get_Ec_gams(self.gams)
     ec_deriv = self.deriv_fn(ec_gams, self.gams)
@@ -387,8 +488,19 @@ class CondChecker():
     cond = np.all(tc_gams + ec_gams <= tol)
     return cond
 
-  def check_conditions(self, conds_str_list=None):
-    """ Check several different exact conditions."""
+  def check_conditions(
+      self,
+      conds_str_list: List[str] = None,
+  ) -> Dict[str, bool]:
+    """Check several different exact conditions.
+    
+    Args:
+      conds_str_list: List of condition strings to run checks. 
+        If None, check all.
+    
+    Returns:
+      Dictionary of condition strings and boolean results.
+    """
 
     # all exact conditions
     conds = {
