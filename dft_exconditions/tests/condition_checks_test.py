@@ -1,5 +1,4 @@
 import pytest
-
 import numpy as np
 
 import dft_exconditions.local_conditions.condition_checks as cc
