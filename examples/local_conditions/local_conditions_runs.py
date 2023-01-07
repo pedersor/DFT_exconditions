@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from dft_exconditions.local_conditions import condition_checks
+from dft_exconditions import local_condition_checks
 
 
 def main():
@@ -46,9 +46,9 @@ def main():
   print(f"running: {func_id}", flush=True)
   print(f"checking condition: {condition_string}", flush=True)
 
-  inp = condition_checks.default_input_grid_search(func_id)
+  inp = local_condition_checks.default_input_grid_search(func_id)
 
-  df = condition_checks.check_condition(
+  df = local_condition_checks.check_condition(
       func_id,
       condition_string,
       inp,

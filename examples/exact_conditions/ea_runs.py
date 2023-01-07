@@ -3,8 +3,8 @@ from collections import defaultdict
 
 import pandas as pd
 
-from dft_exconditions.exact_conditions.evaluator import PyscfEvaluator
-from dft_exconditions.exact_conditions.dataset import Dataset
+from dft_exconditions.evaluator import PyscfEvaluator
+from dft_exconditions.dataset import Dataset
 
 # if True, only run the first few systems.
 DEBUG = True

@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-import dft_exconditions.local_conditions.condition_checks as cc
+import dft_exconditions.local_condition_checks as cc
 
 test_local_conditions_data = [
     ('gga_c_pbe', 'negativity_check', 0.0),

@@ -4,7 +4,7 @@ from typing import Dict, Union, List, Optional
 import numpy as np
 from pyscf import dft, scf
 
-from dft_exconditions.exact_conditions.dataset import Entry, System
+from dft_exconditions.dataset import Entry, System
 
 
 class PyscfEvaluator():

@@ -5,7 +5,7 @@ from typing import List, Dict, Callable, Union
 import numpy as np
 from pyscf import gto
 
-from dft_exconditions.exact_conditions.exact_conds import CondChecker
+from dft_exconditions.exact_condition_checks import CondChecker
 
 HAR_TO_EV = 27.2114
 HAR_TO_KCAL = 627.5

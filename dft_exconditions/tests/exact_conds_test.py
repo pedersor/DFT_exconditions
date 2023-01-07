@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 from pyscf import gto, dft
 
-from dft_exconditions.exact_conditions.exact_conds import CondChecker
+from dft_exconditions.exact_condition_checks import CondChecker
 
 test_mols = [
     # fully spin-polarized system

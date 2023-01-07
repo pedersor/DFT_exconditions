@@ -2,8 +2,8 @@ import argparse
 import numpy as np
 import pandas as pd
 
-from dft_exconditions.exact_conditions.evaluator import PyscfEvaluator
-from dft_exconditions.exact_conditions import dataset
+from dft_exconditions.evaluator import PyscfEvaluator
+from dft_exconditions import dataset
 
 # if DEBUG is True, only run the first few systems.
 DEBUG = True

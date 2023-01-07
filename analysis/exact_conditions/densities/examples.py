@@ -10,7 +10,7 @@ from scipy.optimize import fsolve
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
-from dft_exconditions.exact_conditions.exact_conds import CondChecker
+from dft_exconditions.exact_condition_checks import CondChecker
 from dft_exconditions import utils
 
 PI = np.pi
