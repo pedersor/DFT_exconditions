@@ -1,8 +1,6 @@
 import argparse
 from pathlib import Path
 
-import numpy as np
-
 from dft_exconditions.local_conditions import condition_checks
 
 
@@ -14,12 +12,14 @@ def main():
       "--func_id",
       help="The Libxc (X)C functional id to check.",
       type=str,
+      default='gga_c_sogga11',
   )
   parser.add_argument(
       "-c",
       "--condition_string",
       help="The condition string to check.",
       type=str,
+      default='negativity_check',
   )
   parser.add_argument(
       "-n",
