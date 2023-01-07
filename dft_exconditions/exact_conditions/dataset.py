@@ -1,10 +1,9 @@
 from __future__ import annotations
 import yaml
-from typing import List, Dict, Callable, Optional
+from typing import List, Dict, Callable, Union
 
 import numpy as np
-from pyscf import gto, cc, scf
-import pandas as pd
+from pyscf import gto
 
 from dft_exconditions.exact_conditions.exact_conds import CondChecker
 
@@ -15,17 +14,16 @@ HAR_TO_KCAL = 627.5
 class System(dict):
   """
     Interface to the system in the dataset.
-    No scientific calculation should be performed in this class.
-    Please do not initialize this class directly, instead, use
-    ``System.create()``.
+    No calculations are performed in this class.
+    To initialize, use `System.create()`.
     """
 
   created_systems: Dict[str, System] = {}
 
   @classmethod
   def create(cls, system: Dict) -> System:
-    # create the system if it has not been created
-    # otherwise, return the previously created system
+    """Create the system if it has not been created already. 
+    Else, return the previously created system."""
 
     system_str = str(system)
     if system_str not in cls.created_systems:
@@ -39,23 +37,27 @@ class System(dict):
     self._caches = {}
 
   def get_pyscf_system(self):
-    # convert the system dictionary PySCF system
+    """Convert the system dictionary to PySCF system."""
 
     systype = self["type"]
     if systype == "mol":
       kwargs = self["kwargs"]
-      return gto.M(atom=kwargs["moldesc"],
-                   basis=kwargs["basis"],
-                   spin=kwargs.get("spin", 0),
-                   unit="Bohr",
-                   charge=kwargs.get("charge", 0))
+      return gto.M(
+          atom=kwargs["moldesc"],
+          basis=kwargs["basis"],
+          spin=kwargs.get("spin", 0),
+          unit="Bohr",
+          charge=kwargs.get("charge", 0),
+      )
     else:
-      raise RuntimeError("Unknown system type: %s" % systype)
+      raise RuntimeError(f"Unknown system type: {systype}")
 
-  def get_cache(self, s: str):
+  def get_cache(self, s: str) -> Union[object, None]:
+    """Generic cache getter."""
     return self._caches.get(s, None)
 
-  def set_cache(self, s: str, obj) -> None:
+  def set_cache(self, s: str, obj: object) -> None:
+    """Generic cache setter."""
     self._caches[s] = obj
 
 
@@ -72,7 +74,7 @@ class Dataset():
     return self.obj[i]
 
   def get_indices(self, filtfcn: Callable[[Dict], bool]) -> List[int]:
-    # return the id of the datasets that passes the filter function
+    """ Return the id of the datasets that passes the filter function. """
     return [i for (i, obj) in enumerate(self.obj) if filtfcn(obj)]
 
 
@@ -80,7 +82,7 @@ class Entry(dict):
   """
   Interface to the entry of the dataset.
   Entry class should not be initialized directly, but created through
-  ``Entry.create``
+  `Entry.create`.
   """
 
   created_entries: Dict[str, Entry] = {}
@@ -109,34 +111,45 @@ class Entry(dict):
     self._systems = [System.create(p) for p in entry_dct["systems"]]
 
   def get_systems(self) -> List[System]:
-    """
-    Returns the list of systems in the entry
-    """
+    """Returns the list of systems in the entry."""
     return self._systems
 
 
 class EntryIE(Entry):
-  """Entry for Ionization Energy (IE)"""
+  """Entry for ionization energy (IE)"""
 
   @property
   def entry_type(self) -> str:
     return "ie"
 
-  def get_val(self, evl):
+  def get_val(self, evl: object) -> float:
+    """Obtain the IE value from the system."""
     evl.get_mfs(self)
     tot_energies = np.array([mf.e_tot for mf in evl.mfs])
     ie = np.dot(np.array(self["dotvec"]), tot_energies)
     return ie
 
-  def get_true_val(self):
+  def get_true_val(self) -> float:
+    """Retrieve the true reference IE value from the entry."""
     return self["true_val"]
 
   def exact_cond_checks(
       self,
-      evl,
-      gams,
-      xc,
-  ):
+      evl: object,
+      gams: np.ndarray,
+      xc: str,
+  ) -> List[Dict]:
+    """Perform exact condition checks for the entry.
+    
+    Args:
+      evl: evaluator object (e.g., PyscfEvaluator).
+      gams: array of gamma values to test.
+      xc: exchange-correlation functional to use.
+    
+    Returns:
+      List of dictionaries, each containing the results of the exact 
+        condition check.
+    """
 
     evl.get_mfs(self)
 
@@ -158,6 +171,7 @@ class EntryEA(Entry):
     return "ea"
 
   def get_val(self, evl):
+    """Obtain the EA value from the system."""
 
     evl.get_non_scf_mfs(self)
     tot_energies = np.array([mf.e_tot for mf in evl.non_scf_mfs])
@@ -165,14 +179,26 @@ class EntryEA(Entry):
     return ea
 
   def get_true_val(self):
+    """Retrieve the true reference EA value from the entry."""
     return self["true_val"]
 
   def exact_cond_checks(
       self,
-      evl,
-      gams,
-      xc,
-  ):
+      evl: object,
+      gams: np.ndarray,
+      xc: str,
+  ) -> List[Dict]:
+    """Perform exact condition checks for the entry.
+
+    Args:
+      evl: evaluator object (e.g., PyscfEvaluator).
+      gams: array of gamma values to test.
+      xc: exchange-correlation functional to use.
+    
+    Returns:
+      List of dictionaries, each containing the results of the exact 
+        condition check.
+    """
 
     evl.get_non_scf_mfs(self)
 

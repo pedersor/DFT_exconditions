@@ -1,13 +1,10 @@
 from __future__ import annotations
 from typing import Dict, Union, List, Optional
-import sys
 
 import numpy as np
-from pyscf import gto, dft, lib, cc, scf
-from pyscf.dft import numint
+from pyscf import dft, scf
 
 from dft_exconditions.exact_conditions.dataset import Entry, System
-from dft_exconditions.exact_conditions.exact_conds import CondChecker
 
 
 class PyscfEvaluator():
