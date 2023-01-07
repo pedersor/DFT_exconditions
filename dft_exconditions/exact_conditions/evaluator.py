@@ -8,8 +8,23 @@ from dft_exconditions.exact_conditions.dataset import Entry, System
 
 
 class PyscfEvaluator():
+  """Pyscf evaluator for exact conditions."""
 
-  def __init__(self, xc=None, hf=False, scf_args=[{}]):
+  def __init__(
+      self,
+      xc: Optional[str] = None,
+      hf: bool = False,
+      scf_args: List[dict, str] = [{}],
+  ):
+    """
+    Args:
+      xc: functional id string.
+      hf: whether to run HF calculation.
+      scf_args: list of dictionaries containing different pyscf scf kwargs to 
+        try in case of non-convergence. E.g., {'conv_tol': 1e-6}. Can also
+        contain the string "newton" to do second order (Newton-Raphson) SCF.
+    """
+
     self.xc = xc
     self.hf = hf
     self.scf_args = scf_args
@@ -46,11 +61,12 @@ class PyscfEvaluator():
     self._scf_args = scf_args
 
   def _other_scf_args(self):
-    """ Additional scf args to try. """
+    """Additional scf args to try. """
     other_scf_args = [{'DIIS': scf.ADIIS, 'diis_space': 12}, 'newton']
     return other_scf_args
 
-  def run(self, system: System):
+  def run(self, system: System) -> Union[scf.RHF, scf.UHF, dft.RKS, dft.UKS]:
+    """Run appropriate Pyscf self-consistent calculation on the system."""
 
     mol = system.get_pyscf_system()
     if self.hf:
@@ -78,7 +94,19 @@ class PyscfEvaluator():
 
     return mf
 
-  def run_non_scf(self, system: System, init_dm):
+  def run_non_scf(
+      self,
+      system: System,
+      init_dm: np.ndarray,
+  ) -> Union[dft.RKS, dft.UKS]:
+    """Run non-self-consistent calculation on the system.
+    
+    Args:
+      system: System object.
+      init_dm: initial density matrix 2d array. E.g. could be the density
+        from a HF calculation.
+    """
+
     mol = system.get_pyscf_system()
     if mol.spin == 0 and mol.charge != -1:
       mf = dft.RKS(mol)
@@ -93,17 +121,32 @@ class PyscfEvaluator():
     mf.kernel()
     return mf
 
-  def _use_scf_args(self, mf, scf_args):
+  def _use_scf_args(
+      self,
+      mf: Union[scf.RHF, scf.UHF, dft.RKS, dft.UKS],
+      scf_args: Union[dict, str],
+  ):
+    """Set scf args on Pyscf mf object."""
 
-    if scf_args == 'newton':
-      return mf.newton()
+    if isinstance(scf_args, str):
+      if scf_args.lower() == 'newton':
+        # use second order (Newton-Raphson) SCF
+        return mf.newton()
+      else:
+        raise ValueError(f'Unknown scf_args: {scf_args}')
 
-    for key in scf_args:
-      setattr(mf, key, scf_args[key])
+    elif isinstance(scf_args, dict):
+      # set scf args to pyscf mf object
+      for key in scf_args:
+        setattr(mf, key, scf_args[key])
+
+    else:
+      raise ValueError(f'Unknown scf_args: {scf_args}')
 
     return mf
 
-  def get_mfs(self, entry: Union[Entry, Dict]):
+  def get_mfs(self, entry: Union[Entry, Dict]) -> None:
+    """Run SCF calculation on all systems in the entry."""
 
     if self.mfs is not None:
       return
@@ -116,9 +159,12 @@ class PyscfEvaluator():
 
       self.mfs.append(mf)
 
-    return
+  def get_non_scf_mfs(self, entry: Union[Entry, Dict]) -> None:
+    """Run non-SCF calculation on all systems in the entry using a given 
+    densities. E.g., the given densities could be from a HF calculation.
 
-  def get_non_scf_mfs(self, entry: Union[Entry, Dict]):
+    The initial densities, self.mfs, must be set before calling this method. 
+    """
 
     if self.non_scf_mfs is not None:
       return
@@ -131,17 +177,15 @@ class PyscfEvaluator():
       non_scf_mf = self.run_non_scf(system, init_dm)
       self.non_scf_mfs.append(non_scf_mf)
 
-    return
-
   def reset_mfs(self):
     self.mfs = None
     self.non_scf_mfs = None
 
-  def evaluate(self, entry: Union[Entry, Dict]):
+  def evaluate(self, entry: Union[Entry, Dict]) -> float:
     val = entry.get_val(self)
     return val
 
-  def get_error(self, entry: Union[Entry, Dict]):
+  def get_error(self, entry: Union[Entry, Dict]) -> float:
     val = self.evaluate(entry)
     return val - entry.get_true_val()
 
@@ -149,6 +193,6 @@ class PyscfEvaluator():
       self,
       entry: Union[Entry, Dict],
       gams=np.linspace(0.01, 2),
-  ):
+  ) -> List[Dict]:
 
     return entry.exact_cond_checks(self, gams, self.xc)
