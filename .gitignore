@@ -15,6 +15,7 @@ venv*
 
 # pip install files
 *.egg-info/
+build/
 
 # temporary files
 tmp*
