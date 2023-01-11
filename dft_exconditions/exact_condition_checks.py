@@ -245,6 +245,22 @@ class CondChecker():
       self.set_cache('Ex_lda_gams', ex_gams)
     return ex_gams
 
+  def get_eps_xc(self, xc: str, rho: np.ndarray) -> np.ndarray:
+    """Obtain exchange-correlation (XC) energy density \epsilon_{xc}[n] for a 
+    given density.
+    
+    Args:
+      xc: XC functional id.
+      rho: Pyscf rho variable.
+
+    Returns:
+      eps_xc: XC energy density on a grid with shape (num_density_grids,)
+    """
+
+    eps_xc = dft.libxc.eval_xc(xc, rho, spin=self.unrestricted)[0]
+
+    return eps_xc
+
   def get_Exc_gam(self, gam: float, xc: str) -> float:
     """Obtain exchange-correlation energy E_xc[n_\gamma] for a given
     gamma value.
@@ -258,7 +274,7 @@ class CondChecker():
     """
 
     scaled_rho, scaled_weights = self.get_scaled_sys(gam)
-    eps_xc = dft.libxc.eval_xc(xc, scaled_rho, spin=self.unrestricted)[0]
+    eps_xc = self.get_eps_xc(xc, scaled_rho)
 
     if not self.unrestricted:
       rho = scaled_rho[0]
