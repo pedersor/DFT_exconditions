@@ -1,4 +1,6 @@
 import argparse
+from collections import defaultdict
+
 import numpy as np
 import pandas as pd
 
@@ -6,7 +8,7 @@ from dft_exconditions.evaluator import PyscfEvaluator
 from dft_exconditions import dataset
 
 # if DEBUG is True, only run the first few systems.
-DEBUG = True
+DEBUG = False
 
 
 def main():
@@ -16,7 +18,7 @@ def main():
       "--xc",
       type=str,
       help='xc functional to use for calculations',
-      default='sogga11',
+      default='pbe',
   )
   xc = parser.parse_args().xc
 
@@ -38,22 +40,22 @@ def main():
       'chkfile': False,
       'verbose': 4,
   }
-  evl = PyscfEvaluator(xc, scf_args=scf_args)
+  evl = PyscfEvaluator(xc=xc, hf=True, scf_args=scf_args)
 
   all_sys_checks = []
-  all_sys_errors = {'label': [], 'error': []}
+  all_sys_errors = defaultdict(list)
   for i in range(len(dset)):
 
     curr_calc = dset[i]
     label = curr_calc["name"].split(' ')[-1]
+    all_sys_errors['label'].append(label)
 
     # exact condition checks
     sys_checks = evl.get_exact_cond_checks(curr_calc)
     all_sys_checks.extend(sys_checks)
 
     # benchmark errors
-    sys_error = evl.get_error(curr_calc)
-    all_sys_errors['label'].append(label)
+    sys_error = evl.get_error(curr_calc, use_non_scf=True)
     all_sys_errors['error'].append(sys_error)
 
     # remove cached mf objects
@@ -78,7 +80,7 @@ def main():
   errs_out_file = f'ie_errs_{xc_label}.csv'
   df = pd.DataFrame.from_dict(all_sys_errors)
   df.to_csv(errs_out_file, index=None)
-  print('output abs. energy errors to file: ', errs_out_file)
+  print('output energy errors to file: ', errs_out_file)
 
 
 if __name__ == '__main__':
