@@ -122,10 +122,17 @@ class EntryIE(Entry):
   def entry_type(self) -> str:
     return "ie"
 
-  def get_val(self, evl: object) -> float:
+  def get_val(self, evl: object, use_non_scf: bool = False) -> float:
     """Obtain the IE value from the system."""
-    evl.get_mfs(self)
-    tot_energies = np.array([mf.e_tot for mf in evl.mfs])
+
+    if use_non_scf:
+      evl.get_non_scf_mfs(self)
+      mfs = evl.non_scf_mfs
+    else:
+      evl.get_mfs(self)
+      mfs = evl.mfs
+
+    tot_energies = np.array([mf.e_tot for mf in mfs])
     ie = np.dot(np.array(self["dotvec"]), tot_energies)
     return ie
 
@@ -138,6 +145,7 @@ class EntryIE(Entry):
       evl: object,
       gams: np.ndarray,
       xc: str,
+      use_non_scf: bool = False,
   ) -> List[Dict]:
     """Perform exact condition checks for the entry.
     
@@ -151,10 +159,15 @@ class EntryIE(Entry):
         condition check.
     """
 
-    evl.get_mfs(self)
+    if use_non_scf:
+      evl.get_non_scf_mfs(self)
+      mfs = evl.non_scf_mfs
+    else:
+      evl.get_mfs(self)
+      mfs = evl.mfs
 
     sys_checks = []
-    for mf in evl.mfs:
+    for mf in mfs:
       mf.xc = xc
       checker = CondChecker(mf, gams=gams)
       checks = checker.check_conditions()

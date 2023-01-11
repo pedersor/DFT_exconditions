@@ -183,12 +183,20 @@ class PyscfEvaluator():
     self.mfs = None
     self.non_scf_mfs = None
 
-  def evaluate(self, entry: Union[Entry, Dict]) -> float:
-    val = entry.get_val(self)
+  def evaluate(
+      self,
+      entry: Union[Entry, Dict],
+      use_non_scf: bool = False,
+  ) -> float:
+    val = entry.get_val(self, use_non_scf)
     return val
 
-  def get_error(self, entry: Union[Entry, Dict]) -> float:
-    val = self.evaluate(entry)
+  def get_error(
+      self,
+      entry: Union[Entry, Dict],
+      use_non_scf: bool = False,
+  ) -> float:
+    val = self.evaluate(entry, use_non_scf)
     return val - entry.get_true_val()
 
   def get_exact_cond_checks(
