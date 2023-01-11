@@ -41,7 +41,7 @@ class ModCondChecker(CondChecker):
 def main():
 
   xc = 'b3lyp'
-  xc_label = 'mod-B3LYP'
+  xc_label = 'MOD-B3LYP'
 
   dset = Dataset('ie_atoms.yaml')
 
@@ -66,18 +66,17 @@ def main():
     evl.xc = xc
     evl.get_non_scf_mfs(curr_calc)
 
-    # b3lyp correlation energy
+    # use modified b3lyp correlation energy
     for i, mf in enumerate(evl.non_scf_mfs):
       checker = CondChecker(mf)
       e_c = checker.get_Exc_gam(gam=1, xc=',.81 * LYP + .19 * VWN')
       mod_checker = ModCondChecker(mf)
       mod_e_c = mod_checker.get_Exc_gam(gam=1, xc=',.81 * LYP + .19 * VWN')
-
       evl.non_scf_mfs[i].e_tot += -e_c + mod_e_c
 
     # benchmark errors
     sys_error = evl.get_error(curr_calc, use_non_scf=True)
-    all_sys_errors[xc_label].append(sys_error)
+    all_sys_errors["error"].append(sys_error)
 
     # remove cached mf objects
     evl.reset_mfs()

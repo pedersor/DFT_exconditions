@@ -8,7 +8,15 @@ HAR_TO_KCAL = 627.5
 
 out_dir = Path('data/')
 sorted_cols = [
-    'pbe', 'am05', 'scan', 'r2scan', 'b3lyp', 'b97', 'm06', 'm08-hx', 'sogga11'
+    'pbe',
+    'am05',
+    'scan',
+    'b3lyp',
+    'mod-b3lyp',
+    'b97',
+    'm06',
+    'm08-hx',
+    'sogga11',
 ]
 sorted_cols = [xc.upper() for xc in sorted_cols]
 
@@ -26,7 +34,7 @@ pretty_conds = {
 
 def get_ie_err_fig():
   errs_df = {'System': []}
-  for i, csv in enumerate(out_dir.glob('errs_*.csv')):
+  for i, csv in enumerate(out_dir.glob('*errs_*.csv')):
     xc_df = pd.read_csv(csv)
     if i == 0:
       # all systems + last entry is the MAE
@@ -61,7 +69,7 @@ def get_ie_err_fig():
 def exact_cond_checks_fig():
 
   checks_df = {'Exact conds': []}
-  for i, csv in enumerate(out_dir.glob('checks_*.csv')):
+  for i, csv in enumerate(out_dir.glob('*checks_*.csv')):
     xc_df = pd.read_csv(csv)
     xc_df = xc_df.drop(xc_df.columns[0], axis=1)
     xc_df = xc_df.drop(columns=['tc_non_negativity'])
