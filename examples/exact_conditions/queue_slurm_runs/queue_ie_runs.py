@@ -3,7 +3,6 @@ import subprocess
 from pathlib import Path
 import shutil
 
-import pylibxc
 import yaml
 
 DEBUG = False
@@ -17,7 +16,6 @@ xcs = [
     'b3lyp',
     'HYB_GGA_XC_B97',
     'gga_x_am05,gga_c_am05',
-    #'HYB_GGA_XC_CASE21',
 ]
 
 # out directory
@@ -25,7 +23,7 @@ out_dir = Path('ie_out')
 out_dir.mkdir(parents=True, exist_ok=True)
 
 # copy over files
-status = shutil.copy2('ie_atoms.yaml', out_dir)
+status = shutil.copy2('../ie_atoms.yaml', out_dir)
 
 # slurm config
 with open('slurm_config.yaml', 'r') as file:
@@ -36,9 +34,11 @@ with open('slurm_config.yaml', 'r') as file:
   if isinstance(load_python_cmd, list):
     load_python_cmd = '\n'.join(load_python_cmd)
 
+# path/to/examples/ie_runs.py
+run_file = '../../ie_runs.py'
+
 for xc in xcs:
 
-  run_file = '../ie_runs.py'
   job_file = f'{xc}.job'
   run_cmd = f'srun python {run_file} --xc {xc} '
   debug_cmd = f'python3 {run_file} --xc {xc} '

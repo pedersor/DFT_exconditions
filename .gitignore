@@ -21,7 +21,7 @@ build/
 tmp*
 
 # miscellaneous run files
-*slurm*
+slurm*
 *.job
 *_c_*.csv
 *_xc_*.csv

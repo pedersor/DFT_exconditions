@@ -1,0 +1,11 @@
+account: # slurm account 
+partition: # partitions to use
+ntasks: 1 # do not change
+nodes: 1 # do not change
+cpus-per-task: 8 # number of cpu cores
+time: '10:00:00' # time limit
+mem: 32G # required memory
+load_python_cmd: # bash commands to execute to load python library
+  - ml purge
+  - ml miniconda/3/own
+  - source /path/to/venv/bin/activate
