@@ -482,6 +482,68 @@ def get_enh_factor_x_c(
     return f_x_c
 
 
+# TODO: omit range-separated hybrids from LO analysis and omit all NLC functionals
+class Functional():
+
+  def __init__(self, func_id: Union[str, Tuple(str)]) -> None:
+    """Initialize a functional object.
+
+    Args:
+      func_id: Libxc functional identifier string.
+    """
+
+    if isinstance(func_id, str):
+      func_id = func_id.lower()
+      if '_c_' in func_id:
+        self.func_id_c = func_id
+      elif '_x_' in func_id:
+        self.func_id_x = func_id
+      elif '_xc_' in func_id:
+        self.func_id_xc = func_id
+      else:
+        raise ValueError(f"functional {func_id} not supported.")
+    elif isinstance(func_id, tuple):
+
+      if (len(func_id) != 2 or '_c_' not in func_id[1] or
+          '_x_' not in func_id[0]):
+        raise ValueError(
+            f"Input must be (exchange func_id, correlation func_id)")
+
+      self.func_id_x = func_id[0].lower()
+      self.func_id_c = func_id[1].lower()
+      self.func_id_xc = None
+    else:
+      raise ValueError(f"functional format {func_id} not supported.")
+
+    self.is_combined_xc = self.func_id_xc is not None
+
+    if self.is_combined_xc:
+      self.libxc_fun_xc = pylibxc.LibXCFunctional(self.func_id, "polarized")
+      self.libxc_fun_x = None
+      self.libxc_fun_c = None
+    else:
+      self.libxc_fun_xc = pylibxc.LibXCFunctional(self.func_id, "polarized")
+
+      self.func_id_c = func_id
+
+    self.dfa = get_dfa_rung(self.func_id)
+
+    if self.libxc_fun._needs_laplacian:
+      self.dfa = mgga_xc_lapl
+
+    self.is_hyb = self.libxc_fun.is_hybrid()
+    if self.is_hyb:
+      self.hyb_coeff = self.libxc_fun.hybrid_coefficient()
+      self.hyb_type = self.libxc_fun.hybrid_type()
+      self.hyb_range = self.libxc_fun.hybrid_range_separation()
+      self.hyb_func_id = self.libxc_fun.hybrid_functional_id()
+      self.hyb_func = pylibxc.LibXCFunctional(self.hyb_func_id, "polarized")
+      self.hyb_dfa = get_dfa_rung(self.hyb_func_id)
+
+      if self.hyb_func._needs_laplacian:
+        self.hyb_dfa = mgga_xc_lapl
+
+
 def check_condition_work(
     func_id: str,
     condition: Callable,
