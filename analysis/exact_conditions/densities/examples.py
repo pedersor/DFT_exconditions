@@ -1,5 +1,6 @@
 from typing import Callable, Tuple
 import functools
+import logging
 
 import pylibxc
 import matplotlib.pyplot as plt
@@ -76,8 +77,10 @@ class GedankenDensity():
       num_peaks: int,
       smoothing_factor: float,
       base_grid_pts: int = 1000,
-      num_elec: int = 2,
   ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+    # note that the number of electrons is fixed to 2!
+    num_elec = 2
 
     # desired max and min density values and max \grad n value
     # in oscillating region.
@@ -90,6 +93,14 @@ class GedankenDensity():
     offset = n_max
     eta = smoothing_factor
     period = 2 * amp * (1 - eta) / grad_n
+
+    equation_parameters = {
+        'C': offset,
+        'A': amp,
+        '\eta': eta,
+        'T': period,
+        'N_p': num_peaks,
+    }
 
     # grids used in oscillatory region
     osc_len = (num_peaks - 3 / 4) * period
@@ -187,6 +198,11 @@ class GedankenDensity():
       decay_tail = c * np.exp(a * grids**2 + b * grids)
       decay_tail_deriv = (b + 2 * a * grids) * decay_tail
 
+      # record parameters used
+      equation_parameters['a'] = a
+      equation_parameters['b'] = b
+      equation_parameters['c'] = c
+
       return decay_tail, decay_tail_deriv
 
     tail, tail_deriv = decay_tail(
@@ -213,6 +229,7 @@ class GedankenDensity():
     n_g_grad *= num_elec / norm
 
     # TODO: report parameters used
+    logging.debug(equation_parameters)
 
     return grids, n_g, n_g_grad
 
@@ -237,16 +254,44 @@ class GedankenDensity():
     gdn_density = GedankenDensity.default_gedanken_density()
     grids, n_g, n_g_grad = gdn_density(gamma=gamma)
 
+    tau_vw = (1 / 8) * n_g_grad**2 / n_g
+
     func = pylibxc.LibXCFunctional(func_id, "unpolarized")
     inp = {}
     inp["rho"] = n_g
     inp["sigma"] = n_g_grad**2
+    inp["tau"] = tau_vw
+
     eps_xc = func.compute(inp)
     eps_xc = np.squeeze(eps_xc['zk'])
 
     e_xc = 4 * PI * np.trapz(eps_xc * n_g * (grids**2), grids)
 
     return e_xc
+
+  def get_exact_exchange_energy():
+    gdn_density = GedankenDensity.default_gedanken_density()
+    grids, n, _ = gdn_density(gamma=1)
+
+    n_rp = np.expand_dims(n, axis=0)
+    r = np.expand_dims(grids, axis=1)
+    rp = np.expand_dims(grids, axis=0)
+
+    # the Coulomb integral is performed using the multipole expansion.
+    # Since the density is radial, the integral simplifies since all other
+    # components of the multipole expansion will integrate to zero due to
+    # orthogonality of the spherical harmonics.
+    rad_coulomb_int = np.where(rp < r, rp * rp / r, rp)
+    v_hartree = 4 * PI * np.trapz(rad_coulomb_int * n_rp, grids, axis=1)
+    hartree_energy = 0.5 * 4 * PI * np.trapz(
+        n * v_hartree * grids * grids,
+        grids,
+    )
+
+    # E_x = - U_H / 2 (for two electron singlet)
+    exchange_energy = -hartree_energy / 2
+
+    return exchange_energy
 
   def gedanken_g_s() -> Tuple[np.ndarray, np.ndarray]:
     """Gedanken density g(s) on a grid.
@@ -501,8 +546,34 @@ class Examples():
 
 if __name__ == '__main__':
   """Obtain plots and results for the paper. """
+  import pandas as pd
+
+  logging.basicConfig(level=logging.DEBUG)
 
   utils.use_standard_plotting_params()
+
+  # Gedanken exchange energies
+  exact_x_en = GedankenDensity.get_exact_exchange_energy()
+
+  exchange_df = {'exact': exact_x_en}
+  x_dfas = {
+      'mgga_x_scan': 'SCAN',
+      'lda_x': 'LDA',
+      'gga_x_pbe': 'PBE',
+      'gga_x_b88': 'B88',
+  }
+
+  for x_dfa, label in x_dfas.items():
+    exchange_df[label] = GedankenDensity.get_e_xc(x_dfa, gamma=1)
+
+  exchange_df = pd.DataFrame(exchange_df, index=[0])
+  tex_sty = exchange_df.style.format(precision=3).hide(axis='index')
+  latex = tex_sty.to_latex(
+      column_format='|c|' + (len(tex_sty.columns) - 1) * 'c|',
+      hrules=True,
+  )
+
+  print(exchange_df)
 
   # Fig. 1
   e_c_gdn_density_lyp = GedankenDensity.get_e_xc('gga_c_lyp', gamma=1)
