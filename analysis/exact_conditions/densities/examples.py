@@ -19,6 +19,19 @@ PI = np.pi
 
 class GedankenDensity():
 
+  def __init__(self) -> None:
+    self.gedanken_density = None
+
+  @property
+  def gedanken_density(self):
+    if self._gedanken_density is None:
+      raise ValueError('Gedanken density has not been set.')
+    return self._gedanken_density
+
+  @gedanken_density.setter
+  def gedanken_density(self, value):
+    self._gedanken_density = value
+
   def radial_reduced_grad_dist(
       grids: np.ndarray,
       n: np.ndarray,
@@ -69,7 +82,8 @@ class GedankenDensity():
     deriv2 = np.diff(arr, 2, axis=0) / (dx**2)
     return deriv2
 
-  def gedanken_density(
+  def get_gedanken_density(
+      self,
       gamma: float,
       r_s_min: float,
       r_s_max: float,
@@ -95,11 +109,11 @@ class GedankenDensity():
     period = 2 * amp * (1 - eta) / grad_n
 
     equation_parameters = {
-        'C': offset,
-        'A': amp,
-        '\eta': eta,
-        'T': period,
-        'N_p': num_peaks,
+        '$C$': offset,
+        '$A$': amp,
+        '$\eta$': eta,
+        '$T$': period,
+        '$N_p$': num_peaks,
     }
 
     # grids used in oscillatory region
@@ -199,9 +213,9 @@ class GedankenDensity():
       decay_tail_deriv = (b + 2 * a * grids) * decay_tail
 
       # record parameters used
-      equation_parameters['a'] = a
-      equation_parameters['b'] = b
-      equation_parameters['c'] = c
+      equation_parameters['$a$'] = a
+      equation_parameters['$b$'] = b
+      equation_parameters['$c$'] = c
 
       return decay_tail, decay_tail_deriv
 
@@ -228,31 +242,28 @@ class GedankenDensity():
     n_g *= num_elec / norm
     n_g_grad *= num_elec / norm
 
-    # TODO: report parameters used
-    logging.debug(equation_parameters)
+    self.equation_parameters = equation_parameters
+    self.gedanken_density = [grids, n_g, n_g_grad]
 
     return grids, n_g, n_g_grad
 
-  def default_gedanken_density() -> Callable:
-    """Default gedanken density parameters. 
-  
-    Returns: callable, gedanken_density(gamma).
-    """
-    density = functools.partial(
-        GedankenDensity.gedanken_density,
+  def get_default_gedanken_density(self) -> Callable:
+    """Default gedanken density parameters. """
+    density = self.get_gedanken_density(
+        gamma=1,
         r_s_min=1,
         r_s_max=1.5,
         s_target=2,
         num_peaks=5,
         smoothing_factor=0.05,
     )
+
     return density
 
-  def get_e_xc(func_id: str, gamma: float) -> np.ndarray:
+  def get_e_xc(self, func_id: str) -> np.ndarray:
     """Return E_xc[n^gedanken_\gamma] for a given XC functional. """
 
-    gdn_density = GedankenDensity.default_gedanken_density()
-    grids, n_g, n_g_grad = gdn_density(gamma=gamma)
+    grids, n_g, n_g_grad = self.gedanken_density
 
     tau_vw = (1 / 8) * n_g_grad**2 / n_g
 
@@ -269,9 +280,11 @@ class GedankenDensity():
 
     return e_xc
 
-  def get_exact_exchange_energy():
-    gdn_density = GedankenDensity.default_gedanken_density()
-    grids, n, _ = gdn_density(gamma=1)
+  def get_exact_exchange_energy(self):
+    """ Obtains the exact exchange energy for the two-electron unpolarized 
+    Gedanken density."""
+
+    grids, n, _ = self.gedanken_density
 
     n_rp = np.expand_dims(n, axis=0)
     r = np.expand_dims(grids, axis=1)
@@ -293,16 +306,14 @@ class GedankenDensity():
 
     return exchange_energy
 
-  def gedanken_g_s() -> Tuple[np.ndarray, np.ndarray]:
+  def gedanken_g_s(self) -> Tuple[np.ndarray, np.ndarray]:
     """Gedanken density g(s) on a grid.
     
     Returns: Tuple, (s_grids, g_s), where g_s is the g(s) function on a grid of 
       s values, s_grids.
     """
 
-    density = GedankenDensity.default_gedanken_density()
-
-    grids, n_g, n_g_grad = density(gamma=1)
+    grids, n_g, n_g_grad = self.gedanken_density
 
     s_grids, g_s = GedankenDensity.radial_reduced_grad_dist(
         grids,
@@ -313,26 +324,7 @@ class GedankenDensity():
 
     return s_grids, g_s
 
-  def plot_gedanken_density():
-
-    # plot gedanken density
-    density = GedankenDensity.default_gedanken_density()
-    grids, n_g, n_g_grad = density(gamma=1)
-
-    # plot HF-calculated He density for reference
-    he_grids, he_density = Examples.he_atom_radial_density()
-
-    plt.plot(grids, n_g, label='gedanken density', zorder=2)
-    plt.plot(he_grids, he_density / 7, label='He density / 7')
-    plt.ylabel('$n(r)$')
-    plt.xlabel('$r$')
-    plt.ylim(bottom=0, top=0.3)
-    plt.xlim(left=0, right=2.5)
-    plt.legend(loc='upper right')
-    plt.savefig('gedanken_density.pdf', bbox_inches='tight')
-    plt.close()
-
-  def plot_gedanken_ks_potential():
+  def plot_gedanken_ks_potential(self):
     """Plot the KS potential for a one- or two-electron (singlet) 
     radial gedanken density. 
     
@@ -342,8 +334,7 @@ class GedankenDensity():
 
     """
 
-    density = GedankenDensity.default_gedanken_density()
-    grids, ged_density, _ = density(gamma=1)
+    grids, ged_density, _ = self.gedanken_density
 
     mask = ged_density > 1e-6
     mask[0] = mask[-1] = False
@@ -385,10 +376,34 @@ class GedankenDensity():
 
 class Examples():
 
-  # radial grids for plotting
-  s_grids = np.linspace(0, 5, num=1000)
+  def __init__(self, gedanken_example, s_grids=None):
+    self.gedanken_example = gedanken_example
 
-  def he_atom_radial_density() -> Tuple[np.ndarray, np.ndarray]:
+    # radial grids for plotting
+    if s_grids is None:
+      self.s_grids = np.linspace(0, 5, num=1000)
+    else:
+      self.s_grids = s_grids
+
+  def plot_gedanken_density(self):
+
+    # plot gedanken density
+    grids, n_g, n_g_grad = self.gedanken_example.gedanken_density
+
+    # plot HF-calculated He density for reference
+    he_grids, he_density = self.he_atom_radial_density()
+
+    plt.plot(grids, n_g, label='gedanken density', zorder=2)
+    plt.plot(he_grids, he_density / 7, label='He density / 7')
+    plt.ylabel('$n(r)$')
+    plt.xlabel('$r$')
+    plt.ylim(bottom=0, top=0.3)
+    plt.xlim(left=0, right=2.5)
+    plt.legend(loc='upper right')
+    plt.savefig('gedanken_density.pdf', bbox_inches='tight')
+    plt.close()
+
+  def he_atom_radial_density(self) -> Tuple[np.ndarray, np.ndarray]:
     """Radial density of a He atom calculated with PySCF."""
 
     atom = gto.M(
@@ -418,7 +433,7 @@ class Examples():
 
     return radial_grids, radial_density
 
-  def he_atom_g_s() -> Tuple[np.ndarray, np.ndarray]:
+  def he_atom_g_s(self) -> Tuple[np.ndarray, np.ndarray]:
     """g(s) of a He atom calculated with PySCF."""
 
     atom = gto.M(
@@ -444,11 +459,11 @@ class Examples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=self.s_grids)
 
     return s_grids, g_s
 
-  def n_atom_g_s() -> Tuple[np.ndarray, np.ndarray]:
+  def n_atom_g_s(self) -> Tuple[np.ndarray, np.ndarray]:
     """g(s) of a N atom calculated with PySCF."""
 
     n_atom = gto.M(
@@ -471,11 +486,11 @@ class Examples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=self.s_grids)
 
     return s_grids, g_s
 
-  def n2_mol_g_s() -> Tuple[np.ndarray, np.ndarray]:
+  def n2_mol_g_s(self) -> Tuple[np.ndarray, np.ndarray]:
     """g(s) of a N_2 molecule calculated with PySCF."""
 
     n2_mol = gto.M(
@@ -490,11 +505,11 @@ class Examples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=self.s_grids)
 
     return s_grids, g_s
 
-  def ar_atom_g_s() -> Tuple[np.ndarray, np.ndarray]:
+  def ar_atom_g_s(self) -> Tuple[np.ndarray, np.ndarray]:
     """g(s) of an Ar atom calculated with PySCF."""
 
     ar_atom = gto.M(
@@ -509,17 +524,17 @@ class Examples():
 
     checker = CondChecker(mf, xc='HF')
 
-    s_grids, g_s = checker.reduced_grad_dist(s_grids=Examples.s_grids)
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=self.s_grids)
 
     return s_grids, g_s
 
-  def combined_examples():
+  def combined_examples(self):
     """Combine all examples into one plot."""
 
-    n_out = Examples.n_atom_g_s()
-    he_out = Examples.he_atom_g_s()
-    n2_out = Examples.n2_mol_g_s()
-    gedanken_out = GedankenDensity.gedanken_g_s()
+    n_out = self.n_atom_g_s()
+    he_out = self.he_atom_g_s()
+    n2_out = self.n2_mol_g_s()
+    gedanken_out = self.gedanken_example.gedanken_g_s()
 
     # normalize g_s across different systems
     n_out = (n_out[0], n_out[1] / 7)
@@ -548,12 +563,24 @@ if __name__ == '__main__':
   """Obtain plots and results for the paper. """
   import pandas as pd
 
-  logging.basicConfig(level=logging.DEBUG)
-
   utils.use_standard_plotting_params()
 
-  # Gedanken exchange energies
-  exact_x_en = GedankenDensity.get_exact_exchange_energy()
+  # gedanken density from the paper
+  gedanken_example = GedankenDensity()
+  gedanken_example.get_default_gedanken_density()
+
+  # print parameters used
+  eq_params_df = pd.DataFrame(gedanken_example.equation_parameters, index=[0]).T
+  tex_sty = eq_params_df.style.format(precision=10)
+  latex = tex_sty.to_latex(
+      column_format='|c|c|',
+      hrules=True,
+      caption='Variable values used in the example gedanken density.')
+  with open('gedanken_eq_params.tex', "w") as f:
+    f.write(latex)
+
+  # gedanken exchange energies
+  exact_x_en = gedanken_example.get_exact_exchange_energy()
 
   exchange_df = {'exact': exact_x_en}
   x_dfas = {
@@ -564,7 +591,7 @@ if __name__ == '__main__':
   }
 
   for x_dfa, label in x_dfas.items():
-    exchange_df[label] = GedankenDensity.get_e_xc(x_dfa, gamma=1)
+    exchange_df[label] = gedanken_example.get_e_xc(x_dfa)
 
   exchange_df = pd.DataFrame(exchange_df, index=[0])
   tex_sty = exchange_df.style.format(precision=3).hide(axis='index')
@@ -573,16 +600,18 @@ if __name__ == '__main__':
       hrules=True,
   )
 
-  print(exchange_df)
+  with open('gedanken_exchange_energies.tex', "w") as f:
+    f.write(latex)
 
   # Fig. 1
-  e_c_gdn_density_lyp = GedankenDensity.get_e_xc('gga_c_lyp', gamma=1)
+  e_c_gdn_density_lyp = gedanken_example.get_e_xc('gga_c_lyp')
   print(f'E^LYP_c[n^gedanken] = {e_c_gdn_density_lyp}')
-  e_c_gdn_density_pbe = GedankenDensity.get_e_xc('gga_c_pbe', gamma=1)
+  e_c_gdn_density_pbe = gedanken_example.get_e_xc('gga_c_pbe')
   print(f'E^PBE_c[n^gedanken] = {e_c_gdn_density_pbe}')
-  GedankenDensity.plot_gedanken_density()
   # Fig. 2
-  Examples.combined_examples()
+  examples = Examples(gedanken_example)
+  examples.plot_gedanken_density()
+  examples.combined_examples()
 
   # Supp. Material Fig. 1
-  GedankenDensity.plot_gedanken_ks_potential()
+  gedanken_example.plot_gedanken_ks_potential()
