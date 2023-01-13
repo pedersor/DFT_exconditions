@@ -625,6 +625,10 @@ class LocalCondChecker():
       vars_to_check: Dict[str, np.ndarray] = None,
   ):
     self.functional = functional
+    # Reuse enhancement factors and input meshses for evaluating
+    # different conditions.
+    self.curr_f_x_c = None
+    self.curr_inp_mesh = None
 
     if conditions_to_check is None:
       # by default, get all available conditions to check
@@ -688,7 +692,7 @@ class LocalCondChecker():
       self,
       functional: Functional,
       std_inp: List[np.ndarray],
-  ) -> np.ndarray:
+  ) -> Tuple[np.ndarray, np.ndarray]:
     """Obtains (X)C enhancement factor for a given functional and input (inp). 
     
     If the correlation enhancement factor is requested and the C functional is
@@ -705,19 +709,22 @@ class LocalCondChecker():
         in Libxc.
 
     Returns:
-      enh_factor: (X)C enhancement factor on a grid with shape (mesh_shape,).
+      mesh_grid with shape (mesh_shape,) and (X)C enhancement factor on the 
+      grid with shape (mesh_shape,).
     """
 
-    inp_mesh = np.meshgrid(*std_inp, indexing='ij')
     dfa = functional.dfa_fun
 
-    if False and xc_func and '_c_' in func_id:
-      func_id = func_id.replace('_c_', '_xc_')
-      libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
-      if libxc_fun._needs_laplacian:
-        dfa = mgga_xc_lapl
+    if self.curr_f_x_c and self.curr_inp_mesh:
+      # reuse enhancement factors for evaluating different conditions
+      return self.curr_inp_mesh, self.curr_f_x_c
+    elif functional.is_combined_xc:
+      # xc functional without explicit partitioning -> use conventional
+      # partitioning.
 
-      eps_xc = dfa(libxc_fun, *inp_mesh)
+      inp_mesh = np.meshgrid(*std_inp, indexing='ij')
+      libxc_fun_xc = functional.libxc_fun
+      eps_xc = dfa(libxc_fun_xc, *inp_mesh)
       f_xc = eps_to_enh_factor(inp_mesh, eps_xc)
 
       # obtain "conventional" partitioning by taking an approximate limit
@@ -725,32 +732,31 @@ class LocalCondChecker():
       inf_gam = 5000
       scaled_r_s = std_inp[0] / inf_gam
       scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-      eps_x = dfa(libxc_fun, *scaled_inp_mesh) / inf_gam
+      eps_x = dfa(libxc_fun_xc, *scaled_inp_mesh) / inf_gam
       f_x = eps_to_enh_factor(inp_mesh, eps_x)
 
       f_c = f_xc - f_x
-      return f_c
-    elif False and xc_func and '_x_' in func_id:
-      func_id = func_id.replace('_x_', '_xc_')
-      libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
-      if libxc_fun._needs_laplacian:
-        dfa = mgga_xc_lapl
-
-      # obtain "conventional" partitioning by taking an approximate limit
-      # using \gamma = 5000.
-      inf_gam = 5000
-      scaled_r_s = std_inp[0] / inf_gam
-      scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-      eps_x = dfa(libxc_fun, *scaled_inp_mesh) / inf_gam
-      f_x = eps_to_enh_factor(inp_mesh, eps_x)
-      return f_x
+      self.curr_f_x_c = f_x, f_c
+      self.curr_inp_mesh = inp_mesh
+      return self.curr_inp_mesh, self.curr_f_x_c
     else:
-
+      # obtain enhancement factors for X and C separately
+      inp_mesh = np.meshgrid(*std_inp, indexing='ij')
       libxc_fun_x, libxc_fun_c = functional.libxc_fun
+      if libxc_fun_x:
+        eps_x = dfa(libxc_fun_x, *inp_mesh)
+        f_x = eps_to_enh_factor(inp_mesh, eps_x)
+      else:
+        f_x = None
+      if libxc_fun_c:
+        eps_c = dfa(libxc_fun_c, *inp_mesh)
+        f_c = eps_to_enh_factor(inp_mesh, eps_c)
+      else:
+        f_c = None
 
-      eps_x_c = dfa(libxc_fun_c, *inp_mesh)
-      f_x_c = eps_to_enh_factor(inp_mesh, eps_x_c)
-      return f_x_c
+      self.curr_f_x_c = f_x, f_c
+      self.curr_inp_mesh = inp_mesh
+      return self.curr_inp_mesh, self.curr_f_x_c
 
   def check_condition_work(
       self,
@@ -761,29 +767,12 @@ class LocalCondChecker():
   ) -> Tuple:
 
     r_s = std_inp[0]
-
     if condition == 'deriv_upper_bd_check_1':
       # add r_s = 100 (to approximate r_s -> \infty)
       r_s = np.append(r_s, 100)
-
     r_s_dx = r_s[1] - r_s[0]
 
-    if 'lieb_oxford_bd_check' in condition:
-      f_c = get_enh_factor_x_c(func_id_c, std_inp, xc_func=xc_func)
-
-      # get exchange
-      try:
-        func_id_x = func_id_c.replace('_c_', '_x_')
-        f_x = get_enh_factor_x_c(func_id_x, std_inp, xc_func=xc_func)
-      except:
-        func_id_x = 'hyb_' + func_id_c.replace('_c_', '_x_')
-        f_x = get_enh_factor_x_c(func_id_x, std_inp, xc_func=xc_func)
-
-      f_x_c = (f_x, f_c)
-    else:
-      f_x_c = self.get_enh_factor_x_c(functional, std_inp)
-
-    inp_mesh = np.meshgrid(*std_inp, indexing='ij')
+    inp_mesh, f_x_c = self.get_enh_factor_x_c(functional, std_inp)
 
     condition_fun = globals()[condition]
     if tol is None:
@@ -804,19 +793,21 @@ class LocalCondChecker():
         'xc': [func_label] * num_conditions,
         'condition': [None] * num_conditions,
         'satisfied': [None] * num_conditions,
-        'percent_violated': [None] * num_conditions,
+        'percent_violated': [0] * num_conditions,
     }
-    range_labels = [key + '_range' for key in self.vars_to_check.keys()]
-    for label in range_labels:
-      df[label] = [[]] * num_conditions
+
+    std_var_input = ['r_s', 's', 'zeta', 'alpha', 'q']
+    std_var_input = [var + '_range' for var in std_var_input]
+    for label in std_var_input:
+      # note: each of the lists is unique
+      # (i.e. not a reference to the same list)
+      df[label] = [[] for _ in range(num_conditions)]
 
     s = self.vars_to_check.get('s', None)
     std_inp = get_standard_input(self.vars_to_check)
 
     # total number of condition checks. Keep track of number of violations
     num_checks = np.prod(np.array([var.shape for var in std_inp]))
-    num_violated = 0
-    cond_satisfied = True
 
     if s is None:
       s_splits = [None]
@@ -827,34 +818,35 @@ class LocalCondChecker():
       if s_split is not None:
         std_inp[1] = s_split
 
-      # todo: for i, condition in enumerate(self.conditions_to_check):
+      self.curr_f_x_c = None
+      for i, condition in enumerate(self.conditions_to_check):
+        df['condition'][i] = condition
 
-      i = 0
-      condition = 'negativity_check'
+        split_cond_satisfied, split_num_violated, ranges = self.check_condition_work(
+            self.functional,
+            condition,
+            std_inp,
+        )
 
-      split_cond_satisfied, split_num_violated, ranges = self.check_condition_work(
-          self.functional,
-          condition,
-          std_inp,
-      )
+        df['percent_violated'][i] += split_num_violated
 
-      num_violated += split_num_violated
-      if not split_cond_satisfied:
-        cond_satisfied = False
-        for j, r in enumerate(ranges):
-          df[range_labels[j]][i].append(r)
+        if not split_cond_satisfied:
+          for j, r in enumerate(ranges):
+            df[std_var_input[j]][i].append(r)
 
-    if cond_satisfied:
-      for label in range_labels:
-        df[label] = ['---']
-    else:
-      for label in range_labels:
-        min_range = np.amin(df[label])
-        max_range = np.amax(df[label])
-        df[label] = [[min_range, max_range]]
+    for i in range(num_conditions):
 
-    df['satisfied'] = [cond_satisfied]
-    df['percent_violated'] = [num_violated / num_checks]
+      for label in std_var_input:
+        if len(df[label][i]) == 0:
+          df[label][i] = None
+          continue
+        min_range = np.amin(df[label][i])
+        max_range = np.amax(df[label][i])
+        df[label][i] = [min_range, max_range]
+
+      df['satisfied'][i] = df['percent_violated'][i] == 0
+      df['percent_violated'][i] /= num_checks
+
     df = pd.DataFrame.from_dict(df)
     return df
 
@@ -1056,7 +1048,7 @@ def default_search_variables(func: Functional) -> Dict[str, np.ndarray]:
     }
   elif family == pylibxc.flags.XC_FAMILY_GGA:
     inp = {
-        'r_s': np.linspace(0.0001, 5, 10000),
+        'r_s': np.linspace(0.0001, 5, 500),  # TODO: change
         's': np.linspace(0, 5, 500),
         'zeta': np.linspace(0, 1, 100),
     }
@@ -1229,7 +1221,7 @@ def lieb_oxford_bd_check_Exc(
 
 def deriv_lower_bd_check(
     std_inp: List[np.ndarray],
-    f_c: Tuple[np.ndarray, np.ndarray],
+    f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
     tol: Optional[float] = 1e-5,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
@@ -1241,6 +1233,8 @@ def deriv_lower_bd_check(
   # r_s_dx not used in this condition, but included for consistency with other
   # conditions.
   del r_s_dx
+
+  f_c = f_x_c[1]
 
   regions = np.diff(f_c, axis=0)
   regions = np.where(regions < -tol, True, False)
@@ -1262,7 +1256,7 @@ def deriv_lower_bd_check(
 
 def deriv_upper_bd_check_1(
     std_inp: List[np.ndarray],
-    f_c: Tuple[np.ndarray, np.ndarray],
+    f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
     tol: Optional[float] = 1e-3,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
@@ -1270,6 +1264,8 @@ def deriv_upper_bd_check_1(
 
   d F_c / dr_s <= (F_c[r_s->\infty, ...] - F_c[r_s, ...]) / r_s 
   """
+
+  f_c = f_x_c[1]
 
   r_s_mesh = std_inp[0]
   f_c_inf = f_c[-1]
@@ -1298,7 +1294,7 @@ def deriv_upper_bd_check_1(
 
 def deriv_upper_bd_check_2(
     std_inp: List[np.ndarray],
-    f_c: Tuple[np.ndarray, np.ndarray],
+    f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
     tol: Optional[float] = 5e-4,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
@@ -1306,6 +1302,8 @@ def deriv_upper_bd_check_2(
 
   d F_c / dr_s <= F_c / r_s .
   """
+
+  f_c = f_x_c[1]
 
   r_s_mesh = std_inp[0]
 
@@ -1331,7 +1329,7 @@ def deriv_upper_bd_check_2(
 
 def second_deriv_check(
     std_inp: List[np.ndarray],
-    f_c: Tuple[np.ndarray, np.ndarray],
+    f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
     tol: Optional[float] = 1e-3,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
@@ -1340,6 +1338,8 @@ def second_deriv_check(
   
   d^2 F_c / dr_s^2 >= (-2/r_s) d F_c / dr_s  
   """
+
+  f_c = f_x_c[1]
 
   r_s_mesh = std_inp[0]
 
@@ -1371,7 +1371,7 @@ def second_deriv_check(
 
 def negativity_check(
     std_inp: List[np.ndarray],
-    f_c: Tuple[np.ndarray, np.ndarray],
+    f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
     tol: Optional[float] = 1e-5,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
@@ -1383,6 +1383,8 @@ def negativity_check(
   # r_s_dx not used in this condition, but included for consistency with other
   # conditions.
   del r_s_dx
+
+  f_c = f_x_c[1]
 
   regions = np.where(
       f_c < -tol,
