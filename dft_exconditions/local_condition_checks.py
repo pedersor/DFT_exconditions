@@ -500,7 +500,7 @@ class Functional():
       self.family = self.libxc_fun._family
       self.needs_laplacian = self.libxc_fun._needs_laplacian
       # callable density functional approximation (DFA) function to use
-      self.dfa_fun = self._get_dfa_fun(self.libxc_fun)
+      self.dfa_fun = self._get_dfa_fun()
       self._get_hybrid_variables(self.libxc_fun)
 
     else:
@@ -522,7 +522,7 @@ class Functional():
             family are supported.")
 
       self.name = self.get_name(libxc_fun_c._xc_func_name)
-      self.family = libxc_fun_x._family
+      self.family = libxc_fun_c._family
       self.needs_laplacian = (
           (libxc_fun_c is not None and libxc_fun_c._needs_laplacian) or
           (libxc_fun_x is not None and libxc_fun_x._needs_laplacian))
@@ -775,11 +775,19 @@ class LocalCondChecker():
     inp_mesh, f_x_c = self.get_enh_factor_x_c(functional, std_inp)
 
     condition_fun = globals()[condition]
-    if tol is None:
-      result = condition_fun(inp_mesh, f_x_c, r_s_dx)
-    else:
-      result = condition_fun(inp_mesh, f_x_c, r_s_dx, tol)
 
+    std_kwargs = {
+        'std_inp': inp_mesh,
+        'f_x_c': f_x_c,
+        'r_s_dx': r_s_dx,
+        'xc_lieb_oxford_coef': 2.27,
+        'x_lieb_oxford_coef': 1.174,
+        'hyb_exx_coef': functional.hyb_exx_coef,
+    }
+    if tol:
+      std_kwargs['tol'] = tol
+
+    result = condition_fun(**std_kwargs)
     return result
 
   def check_conditions(
@@ -1149,21 +1157,24 @@ def lieb_oxford_bd_check_Uxc(
     std_inp: List[np.ndarray],
     f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
+    hyb_exx_coef: float,
     tol: Optional[float] = 1e-3,
-    lieb_oxford_bd_const: Optional[float] = 2.27,
+    xc_lieb_oxford_coef: Optional[float] = 2.27,
+    x_lieb_oxford_coef: Optional[float] = 1.174,
+    **kwargs,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """Local condition for Lieb-Oxford (LO) bound on U_xc.
 
-  F_xc +  r_s (d F_c / dr_s) <= lieb_oxford_bd_const
+  F_xc +  r_s (d F_c / dr_s) <= xc_lieb_oxford_coef
   """
-
+  del kwargs
   r_s_mesh = std_inp[0]
   f_x, f_c = f_x_c
   f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
   f_xc = f_c + f_x
 
   regions = np.where(
-      (r_s_mesh * f_c_deriv) + f_xc > lieb_oxford_bd_const + tol,
+      (r_s_mesh * f_c_deriv) + f_xc > xc_lieb_oxford_coef + tol,
       True,
       False,
   )
@@ -1184,24 +1195,23 @@ def lieb_oxford_bd_check_Uxc(
 def lieb_oxford_bd_check_Exc(
     std_inp: List[np.ndarray],
     f_x_c: Tuple[np.ndarray, np.ndarray],
-    r_s_dx: float,
+    hyb_exx_coef: float,
     tol: Optional[float] = 1e-3,
-    lieb_oxford_bd_const: Optional[float] = 2.27,
+    xc_lieb_oxford_coef: Optional[float] = 2.27,
+    x_lieb_oxford_coef: Optional[float] = 1.174,
+    **kwargs,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """Local condition for Lieb-Oxford bound on E_xc:
 
   F_xc <= C 
   """
 
-  # r_s_dx not used in this condition, but included for consistency with other
-  # conditions.
-  del r_s_dx
-
+  del kwargs
   f_x, f_c = f_x_c
   f_xc = f_c + f_x
 
   regions = np.where(
-      f_xc > lieb_oxford_bd_const + tol,
+      f_xc > xc_lieb_oxford_coef + tol,
       True,
       False,
   )
@@ -1222,18 +1232,16 @@ def lieb_oxford_bd_check_Exc(
 def deriv_lower_bd_check(
     std_inp: List[np.ndarray],
     f_x_c: Tuple[np.ndarray, np.ndarray],
-    r_s_dx: float,
     tol: Optional[float] = 1e-5,
+    **kwargs,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """Local condition for E_c[n_\gamma] scaling inequalities 
   (and T_c[n] non-negativity).
 
   0 <= d F_c / dr_s
   """
-  # r_s_dx not used in this condition, but included for consistency with other
-  # conditions.
-  del r_s_dx
 
+  del kwargs
   f_c = f_x_c[1]
 
   regions = np.diff(f_c, axis=0)
@@ -1259,12 +1267,13 @@ def deriv_upper_bd_check_1(
     f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
     tol: Optional[float] = 1e-3,
+    **kwargs,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """Local condition for the T_c[n] upper bound exact condition.
 
   d F_c / dr_s <= (F_c[r_s->\infty, ...] - F_c[r_s, ...]) / r_s 
   """
-
+  del kwargs
   f_c = f_x_c[1]
 
   r_s_mesh = std_inp[0]
@@ -1297,14 +1306,14 @@ def deriv_upper_bd_check_2(
     f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
     tol: Optional[float] = 5e-4,
+    **kwargs,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """Local condition for the unproven conjectured inequality T_c[n] <= -E_c[n]. 
 
   d F_c / dr_s <= F_c / r_s .
   """
-
+  del kwargs
   f_c = f_x_c[1]
-
   r_s_mesh = std_inp[0]
 
   regions_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
@@ -1332,6 +1341,7 @@ def second_deriv_check(
     f_x_c: Tuple[np.ndarray, np.ndarray],
     r_s_dx: float,
     tol: Optional[float] = 1e-3,
+    **kwargs,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """Local condition for the concavity exact condition for correlation energy
   adiabatic connection curves.
@@ -1339,8 +1349,8 @@ def second_deriv_check(
   d^2 F_c / dr_s^2 >= (-2/r_s) d F_c / dr_s  
   """
 
+  del kwargs
   f_c = f_x_c[1]
-
   r_s_mesh = std_inp[0]
 
   f_c_grad = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
@@ -1372,18 +1382,15 @@ def second_deriv_check(
 def negativity_check(
     std_inp: List[np.ndarray],
     f_x_c: Tuple[np.ndarray, np.ndarray],
-    r_s_dx: float,
     tol: Optional[float] = 1e-5,
+    **kwargs,
 ) -> Tuple[bool, int, Union[None, Tuple[List[float]]]]:
   """Local condition for the correlation energy negativity exact condition.
   
   F_c >= 0 
   """
 
-  # r_s_dx not used in this condition, but included for consistency with other
-  # conditions.
-  del r_s_dx
-
+  del kwargs
   f_c = f_x_c[1]
 
   regions = np.where(
