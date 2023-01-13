@@ -46,6 +46,10 @@ def main():
   print(f"running: {func_id}", flush=True)
   print(f"checking condition: {condition_string}", flush=True)
 
+  f = local_condition_checks.Functional(func_id)
+  checker = local_condition_checks.LocalCondChecker(f)
+  checker.check_conditions()
+
   inp = local_condition_checks.default_input_grid_search(func_id)
 
   df = local_condition_checks.check_condition(

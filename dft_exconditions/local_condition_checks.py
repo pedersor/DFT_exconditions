@@ -482,66 +482,381 @@ def get_enh_factor_x_c(
     return f_x_c
 
 
-# TODO: omit range-separated hybrids from LO analysis and omit all NLC functionals
 class Functional():
 
-  def __init__(self, func_id: Union[str, Tuple(str)]) -> None:
+  def __init__(self, func_id: str) -> None:
     """Initialize a functional object.
 
     Args:
       func_id: Libxc functional identifier string.
     """
 
-    if isinstance(func_id, str):
-      func_id = func_id.lower()
-      if '_c_' in func_id:
-        self.func_id_c = func_id
-      elif '_x_' in func_id:
-        self.func_id_x = func_id
-      elif '_xc_' in func_id:
-        self.func_id_xc = func_id
-      else:
-        raise ValueError(f"functional {func_id} not supported.")
-    elif isinstance(func_id, tuple):
-
-      if (len(func_id) != 2 or '_c_' not in func_id[1] or
-          '_x_' not in func_id[0]):
-        raise ValueError(
-            f"Input must be (exchange func_id, correlation func_id)")
-
-      self.func_id_x = func_id[0].lower()
-      self.func_id_c = func_id[1].lower()
-      self.func_id_xc = None
-    else:
-      raise ValueError(f"functional format {func_id} not supported.")
-
-    self.is_combined_xc = self.func_id_xc is not None
+    func_id = func_id.lower()
+    self.is_combined_xc = '_xc_' in func_id
 
     if self.is_combined_xc:
-      self.libxc_fun_xc = pylibxc.LibXCFunctional(self.func_id, "polarized")
-      self.libxc_fun_x = None
-      self.libxc_fun_c = None
+      self.libxc_fun = self._get_libxc_fun(func_id)
+      self.name = self.get_name(self.libxc_fun._xc_func_name)
+      self.family = self.libxc_fun._family
+      self.needs_laplacian = self.libxc_fun._needs_laplacian
+      # callable density functional approximation (DFA) function to use
+      self.dfa_fun = self._get_dfa_fun(self.libxc_fun)
+      self._get_hybrid_variables(self.libxc_fun)
+
     else:
-      self.libxc_fun_xc = pylibxc.LibXCFunctional(self.func_id, "polarized")
+      # try to get corresponding x or c functional ids (if possible)
+      if '_x_' in func_id:
+        libxc_fun_x = self._get_libxc_fun(func_id)
+        libxc_fun_c = self._get_corresponding_x_c(func_id)
+      elif '_c_' in func_id:
+        libxc_fun_c = self._get_libxc_fun(func_id)
+        libxc_fun_x = self._get_corresponding_x_c(func_id)
+      else:
+        raise ValueError(f"functional {func_id} not supported.")
 
-      self.func_id_c = func_id
+      self.libxc_fun = (libxc_fun_x, libxc_fun_c)
 
-    self.dfa = get_dfa_rung(self.func_id)
+      if libxc_fun_x and libxc_fun_c and libxc_fun_x._family != libxc_fun_c._family:
+        raise ValueError(
+            f"Only exchange and correlation functionals that are in the same \
+            family are supported.")
 
-    if self.libxc_fun._needs_laplacian:
-      self.dfa = mgga_xc_lapl
+      self.name = self.get_name(libxc_fun_c._xc_func_name)
+      self.family = libxc_fun_x._family
+      self.needs_laplacian = (
+          (libxc_fun_c is not None and libxc_fun_c._needs_laplacian) or
+          (libxc_fun_x is not None and libxc_fun_x._needs_laplacian))
+      self._get_hybrid_variables(libxc_fun_x)
+      self.dfa_fun = self._get_dfa_fun()
 
-    self.is_hyb = self.libxc_fun.is_hybrid()
-    if self.is_hyb:
-      self.hyb_coeff = self.libxc_fun.hybrid_coefficient()
-      self.hyb_type = self.libxc_fun.hybrid_type()
-      self.hyb_range = self.libxc_fun.hybrid_range_separation()
-      self.hyb_func_id = self.libxc_fun.hybrid_functional_id()
-      self.hyb_func = pylibxc.LibXCFunctional(self.hyb_func_id, "polarized")
-      self.hyb_dfa = get_dfa_rung(self.hyb_func_id)
+  def get_name(self, func_id: str) -> str:
 
-      if self.hyb_func._needs_laplacian:
-        self.hyb_dfa = mgga_xc_lapl
+    func_id = func_id.lower()
+    if '_xc_' in func_id:
+      xc_label = func_id.split('_xc_')[-1]
+    elif '_c_' in func_id:
+      xc_label = func_id.split('_c_')[-1]
+    else:
+      raise ValueError(f"functional {func_id} not supported.")
+    xc_label = xc_label.replace('_', '-').upper()
+    return xc_label
+
+  def _get_libxc_fun(self, func_id: str) -> pylibxc.LibXCFunctional:
+    """Get the libxc functional object for a given functional id."""
+
+    libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
+
+    if libxc_fun._nlc_C or libxc_fun._nlc_b:
+      raise ValueError(f"Non-local correlation functionals are not supported.")
+
+    return libxc_fun
+
+  def _get_hybrid_variables(self, libxc_fun) -> None:
+    """Get the associated hybrid variables for a given libxc functional object."""
+
+    self.range_sep_hyb = False
+
+    if libxc_fun is None:
+      self.hyb_exx_coef = 0
+      return
+
+    hyb_type = libxc_fun._hyb_type
+    if hyb_type == pylibxc.flags.XC_HYB_SEMILOCAL:
+      self.hyb_exx_coef = 0
+    elif hyb_type == pylibxc.flags.XC_HYB_HYBRID:
+      self.hyb_exx_coef = libxc_fun.get_hyb_exx_coef()
+    elif (hyb_type == pylibxc.flags.XC_HYB_CAM or
+          hyb_type == pylibxc.flags.XC_HYB_CAMY or
+          hyb_type == pylibxc.flags.XC_HYB_CAMG):
+      self.range_sep_hyb = True
+    else:
+      raise ValueError(f"Functional {libxc_fun._xc_func_name} not supported. \
+          It may be a double hybrid or some other unsupported functional.")
+
+  def _get_corresponding_x_c(self, func_id_x_c: str) -> str:
+    """Get the corresponding exchange (correlation) functional id for a given
+    correlation (exchange) functional id."""
+
+    if '_c_' in func_id_x_c:
+      corresponding_ids = [
+          func_id_x_c.replace('_c_', '_x_'),
+          'hyb_' + func_id_x_c.replace('_c_', '_x_'),
+      ]
+    elif '_x_' in func_id_x_c:
+      corresponding_ids = [
+          func_id_x_c.replace('_x_', '_c_'),
+          func_id_x_c.replace('_x_', '_c_').replace('hyb_', ''),
+      ]
+    else:
+      raise ValueError(f"functional {func_id_x_c} not supported.")
+
+    id_match = None
+    for id in corresponding_ids:
+      try:
+        id_match = self._get_libxc_fun(id)
+      except:
+        pass
+
+    return id_match
+
+  def _get_dfa_fun(self) -> Callable:
+    """Get the callable function for the corresponding density functional 
+    approximation in libxc."""
+
+    if self.needs_laplacian and self.family == pylibxc.flags.XC_FAMILY_MGGA:
+      return mgga_xc_lapl
+    elif self.family == pylibxc.flags.XC_FAMILY_LDA:
+      return lda_xc
+    elif self.family == pylibxc.flags.XC_FAMILY_GGA:
+      return gga_xc
+    elif self.family == pylibxc.flags.XC_FAMILY_MGGA:
+      return mgga_xc
+    else:
+      raise ValueError(f"functional not supported.")
+
+
+# TODO: omit range-separated hybrids from LO analysis and omit all NLC functionals
+class LocalCondChecker():
+
+  def __init__(
+      self,
+      functional: Functional,
+      conditions_to_check: List[str] = None,
+      vars_to_check: Dict[str, np.ndarray] = None,
+  ):
+    self.functional = functional
+
+    if conditions_to_check is None:
+      # by default, get all available conditions to check
+      self.conditions_to_check = self.get_avail_conds_to_check()
+    else:
+      self.conditions_to_check = conditions_to_check
+
+    if vars_to_check is None:
+      # use default grid search variables
+      self.vars_to_check = default_search_variables(self.functional)
+    else:
+      self.vars_to_check = vars_to_check
+
+  def possible_search_vars(self) -> List[str]:
+    """Get the possible search variables."""
+
+    possible_vars = ['r_s', 's', 'zeta', 'alpha', 'q']
+
+    return possible_vars
+
+  def get_avail_conds_to_check(self) -> List[str]:
+    """Get the available conditions to check."""
+
+    # correlation energy conditions
+    c_conds = [
+        "negativity_check",
+        "deriv_lower_bd_check",
+        "deriv_upper_bd_check_1",
+        "deriv_upper_bd_check_2",
+        "second_deriv_check",
+    ]
+
+    # XC energy conditions
+    xc_conds = [
+        "lieb_oxford_bd_check_Uxc",
+        "lieb_oxford_bd_check_Exc",
+    ]
+
+    avail_conds = []
+    if self.functional.is_combined_xc and self.functional.range_sep_hyb:
+      avail_conds.extend(c_conds)
+    elif self.functional.is_combined_xc:
+      avail_conds.extend(c_conds)
+      avail_conds.extend(xc_conds)
+    elif self.functional.libxc_fun[0] is None or self.functional.range_sep_hyb:
+      # correlation-only functional or range-separated hybrid
+      avail_conds.extend(c_conds)
+    elif self.functional.libxc_fun[0] and self.functional.libxc_fun[1]:
+      # exchange + correlation functional
+      avail_conds.extend(xc_conds)
+      avail_conds.extend(c_conds)
+    elif self.functional.libxc_fun[1]:
+      # exchange-only functional
+      raise NotImplementedError("Exchange-only functionals not supported yet.")
+    else:
+      raise ValueError("Functional not supported.")
+
+    return avail_conds
+
+  def get_enh_factor_x_c(
+      self,
+      functional: Functional,
+      std_inp: List[np.ndarray],
+  ) -> np.ndarray:
+    """Obtains (X)C enhancement factor for a given functional and input (inp). 
+    
+    If the correlation enhancement factor is requested and the C functional is
+    not available in Libxc, the enhancement factor is obtained from the following
+    "conventional" partitioning:
+
+    \epsilon_c(r_s, ...) = \epsilon_xc(r_s, ...) 
+      - \lim_{\gamma \to \infty} \epsilon_xc(r_s / \gamma, ...) / \gamma 
+
+    Args:
+      func_id: Libxc functional identifier string.
+      std_inp: list of input mesh features each with shape (mesh_shape,).
+      xc_func: whether the functional is a XC functional than cannot be separated 
+        in Libxc.
+
+    Returns:
+      enh_factor: (X)C enhancement factor on a grid with shape (mesh_shape,).
+    """
+
+    inp_mesh = np.meshgrid(*std_inp, indexing='ij')
+    dfa = functional.dfa_fun
+
+    if False and xc_func and '_c_' in func_id:
+      func_id = func_id.replace('_c_', '_xc_')
+      libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
+      if libxc_fun._needs_laplacian:
+        dfa = mgga_xc_lapl
+
+      eps_xc = dfa(libxc_fun, *inp_mesh)
+      f_xc = eps_to_enh_factor(inp_mesh, eps_xc)
+
+      # obtain "conventional" partitioning by taking an approximate limit
+      # using \gamma = 5000.
+      inf_gam = 5000
+      scaled_r_s = std_inp[0] / inf_gam
+      scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
+      eps_x = dfa(libxc_fun, *scaled_inp_mesh) / inf_gam
+      f_x = eps_to_enh_factor(inp_mesh, eps_x)
+
+      f_c = f_xc - f_x
+      return f_c
+    elif False and xc_func and '_x_' in func_id:
+      func_id = func_id.replace('_x_', '_xc_')
+      libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
+      if libxc_fun._needs_laplacian:
+        dfa = mgga_xc_lapl
+
+      # obtain "conventional" partitioning by taking an approximate limit
+      # using \gamma = 5000.
+      inf_gam = 5000
+      scaled_r_s = std_inp[0] / inf_gam
+      scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
+      eps_x = dfa(libxc_fun, *scaled_inp_mesh) / inf_gam
+      f_x = eps_to_enh_factor(inp_mesh, eps_x)
+      return f_x
+    else:
+
+      libxc_fun_x, libxc_fun_c = functional.libxc_fun
+
+      eps_x_c = dfa(libxc_fun_c, *inp_mesh)
+      f_x_c = eps_to_enh_factor(inp_mesh, eps_x_c)
+      return f_x_c
+
+  def check_condition_work(
+      self,
+      functional: Functional,
+      condition: str,
+      std_inp: List[np.ndarray],
+      tol: Optional[float] = None,
+  ) -> Tuple:
+
+    r_s = std_inp[0]
+
+    if condition == 'deriv_upper_bd_check_1':
+      # add r_s = 100 (to approximate r_s -> \infty)
+      r_s = np.append(r_s, 100)
+
+    r_s_dx = r_s[1] - r_s[0]
+
+    if 'lieb_oxford_bd_check' in condition:
+      f_c = get_enh_factor_x_c(func_id_c, std_inp, xc_func=xc_func)
+
+      # get exchange
+      try:
+        func_id_x = func_id_c.replace('_c_', '_x_')
+        f_x = get_enh_factor_x_c(func_id_x, std_inp, xc_func=xc_func)
+      except:
+        func_id_x = 'hyb_' + func_id_c.replace('_c_', '_x_')
+        f_x = get_enh_factor_x_c(func_id_x, std_inp, xc_func=xc_func)
+
+      f_x_c = (f_x, f_c)
+    else:
+      f_x_c = self.get_enh_factor_x_c(functional, std_inp)
+
+    inp_mesh = np.meshgrid(*std_inp, indexing='ij')
+
+    condition_fun = globals()[condition]
+    if tol is None:
+      result = condition_fun(inp_mesh, f_x_c, r_s_dx)
+    else:
+      result = condition_fun(inp_mesh, f_x_c, r_s_dx, tol)
+
+    return result
+
+  def check_conditions(
+      self,
+      num_blocks: Optional[int] = 100,
+  ) -> pd.DataFrame:
+
+    func_label = self.functional.name
+    num_conditions = len(self.conditions_to_check)
+    df = {
+        'xc': [func_label] * num_conditions,
+        'condition': [None] * num_conditions,
+        'satisfied': [None] * num_conditions,
+        'percent_violated': [None] * num_conditions,
+    }
+    range_labels = [key + '_range' for key in self.vars_to_check.keys()]
+    for label in range_labels:
+      df[label] = [[]] * num_conditions
+
+    s = self.vars_to_check.get('s', None)
+    std_inp = get_standard_input(self.vars_to_check)
+
+    # total number of condition checks. Keep track of number of violations
+    num_checks = np.prod(np.array([var.shape for var in std_inp]))
+    num_violated = 0
+    cond_satisfied = True
+
+    if s is None:
+      s_splits = [None]
+    else:
+      s_splits = np.split(s, num_blocks)
+
+    for s_split in s_splits:
+      if s_split is not None:
+        std_inp[1] = s_split
+
+      # todo: for i, condition in enumerate(self.conditions_to_check):
+
+      i = 0
+      condition = 'negativity_check'
+
+      split_cond_satisfied, split_num_violated, ranges = self.check_condition_work(
+          self.functional,
+          condition,
+          std_inp,
+      )
+
+      num_violated += split_num_violated
+      if not split_cond_satisfied:
+        cond_satisfied = False
+        for j, r in enumerate(ranges):
+          df[range_labels[j]][i].append(r)
+
+    if cond_satisfied:
+      for label in range_labels:
+        df[label] = ['---']
+    else:
+      for label in range_labels:
+        min_range = np.amin(df[label])
+        max_range = np.amax(df[label])
+        df[label] = [[min_range, max_range]]
+
+    df['satisfied'] = [cond_satisfied]
+    df['percent_violated'] = [num_violated / num_checks]
+    df = pd.DataFrame.from_dict(df)
+    return df
 
 
 def check_condition_work(
@@ -582,6 +897,33 @@ def check_condition_work(
     result = condition(inp_mesh, f_x_c, r_s_dx, tol)
 
   return result
+
+
+def get_standard_input(inp: Dict[str, np.ndarray]) -> np.ndarray:
+  """Get standard variable input."""
+
+  r_s = inp['r_s']
+  zeta = inp['zeta']
+  if len(inp) == 2:
+    # LDA
+    std_inp = [r_s, zeta]
+  elif len(inp) == 3:
+    # GGA
+    s = inp['s']
+    std_inp = [r_s, s, zeta]
+  elif len(inp) == 4:
+    # MGGA w/o laplacian
+    s = inp['s']
+    alpha = inp['alpha']
+    std_inp = [r_s, s, zeta, alpha]
+  elif len(inp) == 5:
+    # MGGA w/ laplacian
+    s = inp['s']
+    alpha = inp['alpha']
+    q = inp['q']
+    std_inp = [r_s, s, zeta, alpha, q]
+
+  return std_inp
 
 
 def check_condition(
@@ -693,6 +1035,50 @@ def check_condition(
   df['percent_violated'] = [num_violated / num_checks]
   df = pd.DataFrame.from_dict(df)
   return df
+
+
+def default_search_variables(func: Functional) -> Dict[str, np.ndarray]:
+  """Default input for the grid search over a given functional.
+  
+  Args:
+    func_id: LibXC functional identifier.
+
+  Returns:
+    inp: dictionary of input variables. Expected keys are 'r_s', 'zeta', ... 
+      Each key corresponds to a 1D numpy array.
+  """
+
+  family = func.family
+  if family == pylibxc.flags.XC_FAMILY_LDA:
+    inp = {
+        'r_s': np.linspace(0.0001, 5, 10000),
+        'zeta': np.linspace(0, 1, 100),
+    }
+  elif family == pylibxc.flags.XC_FAMILY_GGA:
+    inp = {
+        'r_s': np.linspace(0.0001, 5, 10000),
+        's': np.linspace(0, 5, 500),
+        'zeta': np.linspace(0, 1, 100),
+    }
+  elif family == pylibxc.flags.XC_FAMILY_MGGA and not func.needs_laplacian:
+    inp = {
+        'r_s': np.linspace(0.0001, 5, 5000),
+        's': np.linspace(0, 5, 100),
+        'zeta': np.linspace(0, 1, 20),
+        'alpha': np.linspace(0, 5, 100),
+    }
+  elif family == pylibxc.flags.XC_FAMILY_MGGA and func.needs_laplacian:
+    inp = {
+        'r_s': np.linspace(0.0001, 5, 3000),
+        's': np.linspace(0, 5, 100),
+        'zeta': np.linspace(0, 1, 20),
+        'alpha': np.linspace(0, 5, 10),
+        'q': np.linspace(0, 5, 50),
+    }
+  else:
+    raise ValueError(f"functional not supported.")
+
+  return inp
 
 
 def default_input_grid_search(func_id: str) -> Dict[str, np.ndarray]:
