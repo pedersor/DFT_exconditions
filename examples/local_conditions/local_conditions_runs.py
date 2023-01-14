@@ -12,14 +12,7 @@ def main():
       "--func_id",
       help="The Libxc (X)C functional id to check.",
       type=str,
-      default='hyb_gga_xc_b3lyp',
-  )
-  parser.add_argument(
-      "-c",
-      "--condition_string",
-      help="The condition string to check.",
-      type=str,
-      default='negativity_check',
+      default='gga_c_pbe',
   )
   parser.add_argument(
       "-n",
@@ -39,7 +32,6 @@ def main():
   args = parser.parse_args()
 
   func_id = args.func_id
-  condition_string = args.condition_string
   num_blocks = args.num_blocks
   output_dir = Path(args.output_dir)
 
@@ -47,7 +39,7 @@ def main():
 
   f = local_condition_checks.Functional(func_id)
   checker = local_condition_checks.LocalCondChecker(f)
-  df = checker.check_conditions()
+  df = checker.check_conditions(num_blocks=20)
 
   output_dir.mkdir(parents=True, exist_ok=True)
   df.to_csv(

@@ -6,6 +6,9 @@ import pandas as pd
 
 import pylibxc
 
+R_S_INF = 100
+INF_GAM = 5000
+
 
 def get_density(r_s: np.ndarray) -> np.ndarray:
   """Obtains densities, n, from Wigner-Seitz radii, r_s.
@@ -378,110 +381,6 @@ def eps_to_enh_factor(
   return eps_x_c / eps_x_unif
 
 
-def get_dfa_rung(func_id: str) -> Callable:
-  """Returns the density functional approximation (DFA) type of a 
-  given libxc functional id string. 
-
-  Args:
-    func_id: Libxc functional identifier string.
-
-  Returns:
-    fun: callable dfa_xc function.
-  """
-
-  dfa_rungs = {
-      "lda_": lda_xc,
-      "mgga_": mgga_xc,
-      "gga_": gga_xc,
-      "hyb_mgga_": mgga_xc,
-      "hyb_gga_": gga_xc,
-  }
-
-  for dfa, dfa_fun in dfa_rungs.items():
-    if dfa in func_id:
-      return dfa_fun
-
-  raise NotImplementedError(f"functional {func_id} not supported.")
-
-
-def is_xc_func(func_id: str) -> bool:
-  """Check if a given functional is a XC functional than cannot be 
-  separated in Libxc. 
-  """
-
-  return '_xc_' in func_id
-
-
-def get_enh_factor_x_c(
-    func_id: str,
-    std_inp: List[np.ndarray],
-    xc_func: Optional[bool] = False,
-) -> np.ndarray:
-  """Obtains (X)C enhancement factor for a given functional and input (inp). 
-  
-  If the correlation enhancement factor is requested and the C functional is
-  not available in Libxc, the enhancement factor is obtained from the following
-  "conventional" partitioning:
-
-  \epsilon_c(r_s, ...) = \epsilon_xc(r_s, ...) 
-    - \lim_{\gamma \to \infty} \epsilon_xc(r_s / \gamma, ...) / \gamma 
-
-  Args:
-    func_id: Libxc functional identifier string.
-    std_inp: list of input mesh features each with shape (mesh_shape,).
-    xc_func: whether the functional is a XC functional than cannot be separated 
-      in Libxc.
-
-  Returns:
-    enh_factor: (X)C enhancement factor on a grid with shape (mesh_shape,).
-  """
-
-  inp_mesh = np.meshgrid(*std_inp, indexing='ij')
-  dfa = get_dfa_rung(func_id)
-
-  if xc_func and '_c_' in func_id:
-    func_id = func_id.replace('_c_', '_xc_')
-    libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
-    if libxc_fun._needs_laplacian:
-      dfa = mgga_xc_lapl
-
-    eps_xc = dfa(libxc_fun, *inp_mesh)
-    f_xc = eps_to_enh_factor(inp_mesh, eps_xc)
-
-    # obtain "conventional" partitioning by taking an approximate limit
-    # using \gamma = 5000.
-    inf_gam = 5000
-    scaled_r_s = std_inp[0] / inf_gam
-    scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-    eps_x = dfa(libxc_fun, *scaled_inp_mesh) / inf_gam
-    f_x = eps_to_enh_factor(inp_mesh, eps_x)
-
-    f_c = f_xc - f_x
-    return f_c
-  elif xc_func and '_x_' in func_id:
-    func_id = func_id.replace('_x_', '_xc_')
-    libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
-    if libxc_fun._needs_laplacian:
-      dfa = mgga_xc_lapl
-
-    # obtain "conventional" partitioning by taking an approximate limit
-    # using \gamma = 5000.
-    inf_gam = 5000
-    scaled_r_s = std_inp[0] / inf_gam
-    scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-    eps_x = dfa(libxc_fun, *scaled_inp_mesh) / inf_gam
-    f_x = eps_to_enh_factor(inp_mesh, eps_x)
-    return f_x
-  else:
-    libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
-    if libxc_fun._needs_laplacian:
-      dfa = mgga_xc_lapl
-
-    eps_x_c = dfa(libxc_fun, *inp_mesh)
-    f_x_c = eps_to_enh_factor(inp_mesh, eps_x_c)
-    return f_x_c
-
-
 class Functional():
 
   def __init__(self, func_id: str) -> None:
@@ -615,7 +514,6 @@ class Functional():
       raise ValueError(f"functional not supported.")
 
 
-# TODO: omit range-separated hybrids from LO analysis and omit all NLC functionals
 class LocalCondChecker():
 
   def __init__(
@@ -629,6 +527,7 @@ class LocalCondChecker():
     # different conditions.
     self.curr_f_x_c = None
     self.curr_inp_mesh = None
+    self.curr_f_c_inf = None
 
     if conditions_to_check is None:
       # by default, get all available conditions to check
@@ -708,48 +607,67 @@ class LocalCondChecker():
 
     dfa = functional.dfa_fun
 
-    if self.curr_f_x_c and self.curr_inp_mesh:
+    if self.curr_f_x_c is not None:
       # reuse enhancement factors for evaluating different conditions
-      return self.curr_inp_mesh, self.curr_f_x_c
+      return self.curr_inp_mesh, self.curr_f_x_c, self.curr_f_c_inf
     elif functional.is_combined_xc:
+      # add a large r_s value to approximate r_s -> \infty)
+      r_s_inp = np.append(std_inp[0], R_S_INF)
+      inp_mesh = np.array(np.meshgrid(r_s_inp, *std_inp[1:], indexing='ij'))
+
       # xc functional without explicit partitioning -> use conventional
       # partitioning.
-
-      inp_mesh = np.meshgrid(*std_inp, indexing='ij')
       libxc_fun_xc = functional.libxc_fun
       eps_xc = dfa(libxc_fun_xc, *inp_mesh)
       f_xc = eps_to_enh_factor(inp_mesh, eps_xc)
 
       # obtain "conventional" partitioning by taking an approximate limit
-      # using \gamma = 5000.
-      inf_gam = 5000
-      scaled_r_s = std_inp[0] / inf_gam
-      scaled_inp_mesh = np.meshgrid(scaled_r_s, *std_inp[1:], indexing='ij')
-      eps_x = dfa(libxc_fun_xc, *scaled_inp_mesh) / inf_gam
+      # using a large \gamma value.
+      scaled_r_s_inp = r_s_inp / INF_GAM
+      scaled_inp_mesh = np.meshgrid(scaled_r_s_inp, *std_inp[1:], indexing='ij')
+      eps_x = dfa(libxc_fun_xc, *scaled_inp_mesh) / INF_GAM
       f_x = eps_to_enh_factor(inp_mesh, eps_x)
-
       f_c = f_xc - f_x
-      self.curr_f_x_c = f_x, f_c
+
+      # remove r_s -> \infty value from inp_mesh
+      inp_mesh, _ = np.split(inp_mesh, [-1], axis=1)
+      f_c, f_c_inf = np.split(f_c, [-1])
+      self.curr_f_x_c = f_x[:-1], f_c
+      self.curr_f_c_inf = f_c_inf
       self.curr_inp_mesh = inp_mesh
-      return self.curr_inp_mesh, self.curr_f_x_c
+      return self.curr_inp_mesh, self.curr_f_x_c, self.curr_f_c_inf
     else:
+      # add a large r_s value to approximate r_s -> \infty)
+      r_s_inp = np.append(std_inp[0], R_S_INF)
+      inp_mesh = np.array(np.meshgrid(r_s_inp, *std_inp[1:], indexing='ij'))
+
       # obtain enhancement factors for X and C separately
-      inp_mesh = np.meshgrid(*std_inp, indexing='ij')
       libxc_fun_x, libxc_fun_c = functional.libxc_fun
+
       if libxc_fun_x:
         eps_x = dfa(libxc_fun_x, *inp_mesh)
         f_x = eps_to_enh_factor(inp_mesh, eps_x)
+        # remove r_s -> \infty value from f_x
+        f_x = f_x[:-1]
       else:
         f_x = None
       if libxc_fun_c:
         eps_c = dfa(libxc_fun_c, *inp_mesh)
         f_c = eps_to_enh_factor(inp_mesh, eps_c)
+        # separate r_s -> \infty value from f_c
+        f_c, f_c_inf = np.split(f_c, [-1])
+
       else:
         f_c = None
+        f_c_inf = None
+
+      # remove r_s -> \infty value from inp_mesh
+      inp_mesh, _ = np.split(inp_mesh, [-1], axis=1)
 
       self.curr_f_x_c = f_x, f_c
       self.curr_inp_mesh = inp_mesh
-      return self.curr_inp_mesh, self.curr_f_x_c
+      self.curr_f_c_inf = f_c_inf
+      return self.curr_inp_mesh, self.curr_f_x_c, self.curr_f_c_inf
 
   def check_condition_work(
       self,
@@ -761,27 +679,16 @@ class LocalCondChecker():
 
     r_s = std_inp[0]
     r_s_dx = r_s[1] - r_s[0]
-    # add r_s = 100 (to approximate r_s -> \infty)
-    std_inp[0] = np.append(std_inp[0], 100)
 
-    inp_mesh, f_x_c = self.get_enh_factor_x_c(functional, std_inp)
-    if condition != 'deriv_upper_bd_check_1':
-      # remove r_s = 100
-      f_x, f_c = f_x_c
-      if f_x is not None:
-        f_x = f_x[:-1]
-      if f_c is not None:
-        f_c = f_c[:-1]
-      f_x_c = f_x, f_c
-      for i in range(len(inp_mesh)):
-        inp_mesh[i] = inp_mesh[i][:-1]
+    inp_mesh, f_x_c, f_c_inf = self.get_enh_factor_x_c(functional, std_inp)
 
-    condition_fun = globals()[condition]
+    condition_fun = condition_str_to_fun(condition)
 
     std_kwargs = {
         'std_inp': inp_mesh,
         'f_x_c': f_x_c,
         'r_s_dx': r_s_dx,
+        'f_c_inf': f_c_inf,
         'xc_lieb_oxford_coef': 2.27,
         'x_lieb_oxford_coef': 1.174,
         'hyb_exx_coef': functional.hyb_exx_coef,
@@ -828,7 +735,10 @@ class LocalCondChecker():
       if s_split is not None:
         std_inp[1] = s_split
 
+      # reset evaluated enhancement factor values for new s_split
       self.curr_f_x_c = None
+      self.curr_inp_mesh = None
+      self.curr_f_c_inf = None
       for i, condition in enumerate(self.conditions_to_check):
         df['condition'][i] = condition
 
@@ -861,46 +771,6 @@ class LocalCondChecker():
     return df
 
 
-def check_condition_work(
-    func_id: str,
-    condition: Callable,
-    std_inp: List[np.ndarray],
-    tol: Optional[float] = None,
-) -> Tuple:
-
-  r_s = std_inp[0]
-  r_s_dx = r_s[1] - r_s[0]
-  xc_func = is_xc_func(func_id)
-  if xc_func:
-    func_id_c = func_id.replace('_xc_', '_c_')
-  else:
-    func_id_c = func_id
-
-  if 'lieb_oxford_bd_check' in condition.__name__:
-    f_c = get_enh_factor_x_c(func_id_c, std_inp, xc_func=xc_func)
-
-    # get exchange
-    try:
-      func_id_x = func_id_c.replace('_c_', '_x_')
-      f_x = get_enh_factor_x_c(func_id_x, std_inp, xc_func=xc_func)
-    except:
-      func_id_x = 'hyb_' + func_id_c.replace('_c_', '_x_')
-      f_x = get_enh_factor_x_c(func_id_x, std_inp, xc_func=xc_func)
-
-    f_x_c = (f_x, f_c)
-  else:
-    f_x_c = get_enh_factor_x_c(func_id_c, std_inp, xc_func=xc_func)
-
-  inp_mesh = np.meshgrid(*std_inp, indexing='ij')
-
-  if tol is None:
-    result = condition(inp_mesh, f_x_c, r_s_dx)
-  else:
-    result = condition(inp_mesh, f_x_c, r_s_dx, tol)
-
-  return result
-
-
 def get_standard_input(inp: Dict[str, np.ndarray]) -> np.ndarray:
   """Get standard variable input."""
 
@@ -926,117 +796,6 @@ def get_standard_input(inp: Dict[str, np.ndarray]) -> np.ndarray:
     std_inp = [r_s, s, zeta, alpha, q]
 
   return std_inp
-
-
-def check_condition(
-    func_id: str,
-    condition_string: str,
-    inp: Dict[str, np.ndarray],
-    num_blocks: Optional[int] = 100,
-    tol: Optional[float] = None,
-) -> pd.DataFrame:
-  """Assessment of a given local condition for a given functional and input. 
-  
-  If the condition is not met, return min. and max. variables where the 
-  condition is not met. The percentage of violations is also returned.
-
-  Args:
-    func_id: XC functional identifier.
-    condition_string: string identifying the condition function to check.
-    inp: dictionary of input variables. Expected keys are 'r_s', 'zeta', 
-      's', 'alpha', or 'q'.
-    num_blocks: split the data into num_blocks blocks (based on memory 
-      constraints) to check the condition.
-    tol: tolerance for the condition. If None, use default tolerance.
-
-  Returns:
-    df: pandas dataframe with the following columns: "xc" [str], 
-      "condition" [str], "satisfied" [Bool], "percent_violated" [float], 
-      "r_s_range" [[float, float]], "zeta_range" [[float, float]], 
-      "s_range" [[float, float]], "alpha_range" [[float, float]], 
-      "q_range": [[float, float]].
-  """
-
-  condition = condition_string_to_fun(condition_string)
-  func_id = func_id.lower()
-  df = {
-      'xc': [func_id],
-      'condition': [condition_string],
-      'satisfied': [],
-      'percent_violated': [],
-  }
-  range_labels = [key + '_range' for key in inp]
-  for label in range_labels:
-    df[label] = []
-
-  r_s = inp['r_s']
-  zeta = inp['zeta']
-
-  if condition_string == 'deriv_upper_bd_check_1':
-    # add r_s = 100 (to approximate r_s -> \infty)
-    r_s = np.append(r_s, 100)
-
-  if len(inp) == 2:
-    # LDA
-    std_inp = [r_s, zeta]
-    s = None
-  elif len(inp) == 3:
-    # GGA
-    s = inp['s']
-    std_inp = [r_s, s, zeta]
-  elif len(inp) == 4:
-    # MGGA w/o laplacian
-    s = inp['s']
-    alpha = inp['alpha']
-    df['q_range'] = ['---']
-    std_inp = [r_s, s, zeta, alpha]
-  elif len(inp) == 5:
-    # MGGA w/ laplacian
-    s = inp['s']
-    alpha = inp['alpha']
-    q = inp['q']
-    std_inp = [r_s, s, zeta, alpha, q]
-
-  # total number of condition checks. Keep track of number of violations
-  num_checks = np.prod(np.array([var.shape for var in std_inp]))
-  num_violated = 0
-  cond_satisfied = True
-
-  if s is None:
-    s_splits = [None]
-  else:
-    s_splits = np.split(s, num_blocks)
-
-  for s_split in s_splits:
-    if s_split is not None:
-      std_inp[1] = s_split
-
-    split_cond_satisfied, split_num_violated, ranges = check_condition_work(
-        func_id,
-        condition,
-        std_inp,
-        tol=tol,
-    )
-
-    num_violated += split_num_violated
-    if not split_cond_satisfied:
-      cond_satisfied = False
-      for i, r in enumerate(ranges):
-        df[range_labels[i]].append(r)
-
-  if cond_satisfied:
-    for label in range_labels:
-      df[label] = ['---']
-  else:
-    for label in range_labels:
-      min_range = np.amin(df[label])
-      max_range = np.amax(df[label])
-      df[label] = [[min_range, max_range]]
-
-  df['satisfied'] = [cond_satisfied]
-  df['percent_violated'] = [num_violated / num_checks]
-  df = pd.DataFrame.from_dict(df)
-  return df
 
 
 def default_search_variables(func: Functional) -> Dict[str, np.ndarray]:
@@ -1083,46 +842,7 @@ def default_search_variables(func: Functional) -> Dict[str, np.ndarray]:
   return inp
 
 
-def default_input_grid_search(func_id: str) -> Dict[str, np.ndarray]:
-  """Default input for the grid search over a given functional.
-  
-  Args:
-    func_id: LibXC functional identifier.
-
-  Returns:
-    inp: dictionary of input variables. Expected keys are 'r_s', 'zeta', ... 
-      Each key corresponds to a 1D numpy array.
-  """
-
-  libxc_fun = pylibxc.LibXCFunctional(func_id, "polarized")
-
-  if 'mgga_c_' in func_id or 'mgga_xc_' in func_id:
-    if libxc_fun._needs_laplacian:
-      inp = {
-          'r_s': np.linspace(0.0001, 5, 3000),
-          's': np.linspace(0, 5, 100),
-          'zeta': np.linspace(0, 1, 20),
-          'alpha': np.linspace(0, 5, 10),
-          'q': np.linspace(0, 5, 50),
-      }
-    else:
-      inp = {
-          'r_s': np.linspace(0.0001, 5, 5000),
-          's': np.linspace(0, 5, 100),
-          'zeta': np.linspace(0, 1, 20),
-          'alpha': np.linspace(0, 5, 100),
-      }
-  elif 'gga_c_' in func_id or 'gga_xc_' in func_id:
-    inp = {
-        'r_s': np.linspace(0.0001, 5, 500),
-        's': np.linspace(0, 5, 500),
-        'zeta': np.linspace(0, 1, 100),
-    }
-
-  return inp
-
-
-def available_conditions() -> Dict[str, Callable]:
+def condition_str_to_fun(condition_str: str) -> Callable:
   """Get available conditions dictionary. """
 
   conditions = {
@@ -1135,22 +855,12 @@ def available_conditions() -> Dict[str, Callable]:
       "lieb_oxford_bd_check_Exc": lieb_oxford_bd_check_Exc,
   }
 
-  return conditions
-
-
-def condition_string_to_fun(condition_string: str) -> Callable:
-  """Get condition function (callable) from identifying string. """
-
-  conditions = available_conditions()
-
-  try:
-    cond_fun = conditions[condition_string]
-  except KeyError:
+  cond_fun = conditions.get(condition_str, None)
+  if cond_fun is None:
     lined_conds = '\n'.join(list(conditions.keys()))
-    raise NotImplementedError(
-        f'Condition not implemented: {condition_string} \n'
-        'Available conditions: \n'
-        f'{lined_conds}')
+    raise NotImplementedError(f'Condition not implemented: {condition_str} \n'
+                              'Available conditions: \n'
+                              f'{lined_conds}')
 
   return cond_fun
 
@@ -1268,6 +978,7 @@ def deriv_lower_bd_check(
 def deriv_upper_bd_check_1(
     std_inp: List[np.ndarray],
     f_x_c: Tuple[np.ndarray, np.ndarray],
+    f_c_inf: np.ndarray,
     r_s_dx: float,
     tol: Optional[float] = 1e-3,
     **kwargs,
@@ -1280,9 +991,6 @@ def deriv_upper_bd_check_1(
   f_c = f_x_c[1]
 
   r_s_mesh = std_inp[0]
-  f_c_inf = f_c[-1]
-  f_c = f_c[:-1]
-  r_s_mesh = r_s_mesh[:-1]
 
   f_c_deriv = np.gradient(f_c, r_s_dx, edge_order=2, axis=0)
   regions = np.where(
@@ -1296,8 +1004,8 @@ def deriv_upper_bd_check_1(
   num_violated = np.sum(regions[3:-3])
 
   if not cond_satisfied:
-    ranges = ([np.amin(feature[:-1][regions]),
-               np.amax(feature[:-1][regions])] for feature in std_inp)
+    ranges = ([np.amin(feature[regions]),
+               np.amax(feature[regions])] for feature in std_inp)
   else:
     ranges = None
 
