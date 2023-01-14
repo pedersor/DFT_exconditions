@@ -12,7 +12,7 @@ def main():
       "--func_id",
       help="The Libxc (X)C functional id to check.",
       type=str,
-      default='gga_c_sogga11',
+      default='hyb_gga_xc_b3lyp',
   )
   parser.add_argument(
       "-c",
@@ -44,24 +44,14 @@ def main():
   output_dir = Path(args.output_dir)
 
   print(f"running: {func_id}", flush=True)
-  print(f"checking condition: {condition_string}", flush=True)
 
   f = local_condition_checks.Functional(func_id)
   checker = local_condition_checks.LocalCondChecker(f)
-  checker.check_conditions()
-
-  inp = local_condition_checks.default_input_grid_search(func_id)
-
-  df = local_condition_checks.check_condition(
-      func_id,
-      condition_string,
-      inp,
-      num_blocks=num_blocks,
-  )
+  df = checker.check_conditions()
 
   output_dir.mkdir(parents=True, exist_ok=True)
   df.to_csv(
-      output_dir / f'{func_id}_{condition_string}.csv',
+      output_dir / f'{func_id}.csv',
       header=True,
       index=False,
   )

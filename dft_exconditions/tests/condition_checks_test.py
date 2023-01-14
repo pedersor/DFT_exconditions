@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-import dft_exconditions.local_condition_checks as cc
+import dft_exconditions.local_condition_checks as lcc
 
 test_local_conditions_data = [
     ('gga_c_pbe', 'negativity_check', 0.0),
@@ -30,8 +30,8 @@ test_local_conditions_data = [
     ('mgga_c_m06', 'deriv_upper_bd_check_1', 0.3014901764901765),
     ('mgga_c_m06', 'deriv_upper_bd_check_2', 0.3813),
     ('mgga_c_m06', 'second_deriv_check', 0.3765),
-    ('mgga_c_m06', 'lieb_oxford_bd_check_Uxc', 0.32535833333333336),
-    ('mgga_c_m06', 'lieb_oxford_bd_check_Exc', 0.3351),
+    ('mgga_c_m06', 'lieb_oxford_bd_check_Uxc', 0.36735),
+    ('mgga_c_m06', 'lieb_oxford_bd_check_Exc', 0.364467),
 ]
 
 test_inp = {
@@ -55,12 +55,9 @@ def test_local_conditions(func_id: str, condition_string: str, expected: float):
   if 'mgga_' in func_id:
     test_inp['alpha'] = np.linspace(0, 5, 5)
 
-  df = cc.check_condition(
-      func_id,
-      condition_string,
-      test_inp,
-      num_blocks=1,
-  )
+  f = lcc.Functional(func_id)
+  checker = lcc.LocalCondChecker(f, [condition_string], test_inp)
+  df = checker.check_conditions(num_blocks=1)
 
   np.testing.assert_allclose(
       df['percent_violated'].iloc[0],

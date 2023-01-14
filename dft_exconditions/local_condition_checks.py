@@ -642,13 +642,6 @@ class LocalCondChecker():
     else:
       self.vars_to_check = vars_to_check
 
-  def possible_search_vars(self) -> List[str]:
-    """Get the possible search variables."""
-
-    possible_vars = ['r_s', 's', 'zeta', 'alpha', 'q']
-
-    return possible_vars
-
   def get_avail_conds_to_check(self) -> List[str]:
     """Get the available conditions to check."""
 
@@ -767,12 +760,21 @@ class LocalCondChecker():
   ) -> Tuple:
 
     r_s = std_inp[0]
-    if condition == 'deriv_upper_bd_check_1':
-      # add r_s = 100 (to approximate r_s -> \infty)
-      r_s = np.append(r_s, 100)
     r_s_dx = r_s[1] - r_s[0]
+    # add r_s = 100 (to approximate r_s -> \infty)
+    std_inp[0] = np.append(std_inp[0], 100)
 
     inp_mesh, f_x_c = self.get_enh_factor_x_c(functional, std_inp)
+    if condition != 'deriv_upper_bd_check_1':
+      # remove r_s = 100
+      f_x, f_c = f_x_c
+      if f_x is not None:
+        f_x = f_x[:-1]
+      if f_c is not None:
+        f_c = f_c[:-1]
+      f_x_c = f_x, f_c
+      for i in range(len(inp_mesh)):
+        inp_mesh[i] = inp_mesh[i][:-1]
 
     condition_fun = globals()[condition]
 
@@ -1174,7 +1176,8 @@ def lieb_oxford_bd_check_Uxc(
   f_xc = f_c + f_x
 
   regions = np.where(
-      (r_s_mesh * f_c_deriv) + f_xc > xc_lieb_oxford_coef + tol,
+      r_s_mesh * f_c_deriv + f_xc >
+      (xc_lieb_oxford_coef - hyb_exx_coef * x_lieb_oxford_coef) + tol,
       True,
       False,
   )
@@ -1211,7 +1214,7 @@ def lieb_oxford_bd_check_Exc(
   f_xc = f_c + f_x
 
   regions = np.where(
-      f_xc > xc_lieb_oxford_coef + tol,
+      f_xc > (xc_lieb_oxford_coef - hyb_exx_coef * x_lieb_oxford_coef) + tol,
       True,
       False,
   )
