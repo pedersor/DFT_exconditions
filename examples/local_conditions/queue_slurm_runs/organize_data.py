@@ -1,7 +1,7 @@
 import pandas as pd
 import glob
 
-all_files = glob.glob("*.csv")
+all_files = glob.glob("out/*.csv")
 all_df = pd.DataFrame()
 for file_ in all_files:
   df = pd.read_csv(file_)
