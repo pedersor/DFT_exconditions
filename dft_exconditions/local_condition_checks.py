@@ -398,9 +398,10 @@ class Functional():
       self.name = self.get_name(self.libxc_fun._xc_func_name)
       self.family = self.libxc_fun._family
       self.needs_laplacian = self.libxc_fun._needs_laplacian
+      self._get_hybrid_variables(self.libxc_fun)
+      self.dfa_type = self._get_dfa_type()
       # callable density functional approximation (DFA) function to use
       self.dfa_fun = self._get_dfa_fun()
-      self._get_hybrid_variables(self.libxc_fun)
 
     else:
       # try to get corresponding x or c functional ids (if possible)
@@ -426,6 +427,8 @@ class Functional():
           (libxc_fun_c is not None and libxc_fun_c._needs_laplacian) or
           (libxc_fun_x is not None and libxc_fun_x._needs_laplacian))
       self._get_hybrid_variables(libxc_fun_x)
+      self.dfa_type = self._get_dfa_type()
+      # callable density functional approximation (DFA) function to use
       self.dfa_fun = self._get_dfa_fun()
 
   def get_name(self, func_id: str) -> str:
@@ -449,6 +452,18 @@ class Functional():
       raise ValueError(f"Non-local correlation functionals are not supported.")
 
     return libxc_fun
+
+  def _get_dfa_type(self):
+
+    flag_to_dfa_type = {
+        pylibxc.flags.XC_FAMILY_LDA: 'LDA',
+        pylibxc.flags.XC_FAMILY_GGA: 'GGA',
+        pylibxc.flags.XC_FAMILY_MGGA: 'MGGA',
+    }
+
+    hyb_str = 'HYB_' if self.hyb_exx_coef > 0 or self.range_sep_hyb else ''
+    dfa_type = hyb_str + flag_to_dfa_type[self.family]
+    return dfa_type
 
   def _get_hybrid_variables(self, libxc_fun) -> None:
     """Get the associated hybrid variables for a given libxc functional object."""
@@ -704,13 +719,13 @@ class LocalCondChecker():
       num_blocks: Optional[int] = 100,
   ) -> pd.DataFrame:
 
-    func_label = self.functional.name
     num_conditions = len(self.conditions_to_check)
     df = {
-        'xc': [func_label] * num_conditions,
+        'xc': [self.functional.name] * num_conditions,
+        'dfa type': [self.functional.dfa_type] * num_conditions,
         'condition': [None] * num_conditions,
         'satisfied': [None] * num_conditions,
-        'percent_violated': [0] * num_conditions,
+        'fraction violated': [0] * num_conditions,
     }
 
     std_var_input = ['r_s', 's', 'zeta', 'alpha', 'q']
@@ -748,7 +763,7 @@ class LocalCondChecker():
             std_inp,
         )
 
-        df['percent_violated'][i] += split_num_violated
+        df['fraction violated'][i] += split_num_violated
 
         if not split_cond_satisfied:
           for j, r in enumerate(ranges):
@@ -764,8 +779,8 @@ class LocalCondChecker():
         max_range = np.amax(df[label][i])
         df[label][i] = [min_range, max_range]
 
-      df['satisfied'][i] = df['percent_violated'][i] == 0
-      df['percent_violated'][i] /= num_checks
+      df['satisfied'][i] = df['fraction violated'][i] == 0
+      df['fraction violated'][i] /= num_checks
 
     df = pd.DataFrame.from_dict(df)
     return df

@@ -60,7 +60,7 @@ def test_local_conditions(func_id: str, condition_string: str, expected: float):
   df = checker.check_conditions(num_blocks=1)
 
   np.testing.assert_allclose(
-      df['percent_violated'].iloc[0],
+      df['fraction violated'].iloc[0],
       expected,
       atol=1e-3,
   )
