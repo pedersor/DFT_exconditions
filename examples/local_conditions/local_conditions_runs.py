@@ -39,7 +39,7 @@ def main():
 
   f = local_condition_checks.Functional(func_id)
   checker = local_condition_checks.LocalCondChecker(f)
-  df = checker.check_conditions(num_blocks=20)
+  df = checker.check_conditions()
 
   output_dir.mkdir(parents=True, exist_ok=True)
   df.to_csv(

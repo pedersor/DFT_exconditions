@@ -832,7 +832,7 @@ def default_search_variables(func: Functional) -> Dict[str, np.ndarray]:
     }
   elif family == pylibxc.flags.XC_FAMILY_GGA:
     inp = {
-        'r_s': np.linspace(0.0001, 5, 500),  # TODO: change
+        'r_s': np.linspace(0.0001, 5, 10000),
         's': np.linspace(0, 5, 500),
         'zeta': np.linspace(0, 1, 100),
     }
