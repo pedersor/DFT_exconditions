@@ -37,6 +37,7 @@ with open('slurm_config.yaml', 'r') as file:
 run_file = Path('../local_conditions_runs.py')
 run_files = [
     run_file,
+    Path('organize_data.py'),
     # other relevant files
 ]
 for file in run_files:
@@ -53,7 +54,7 @@ for func_type in func_types:
 
     job_file = f'{xc_func}.job'
     run_cmd = f'srun python {run_file.name} -f {xc_func} '
-    debug_cmd = ''  #f'python3 {run_file} -f {xc_func} '
+    debug_cmd = ''
     with open(out_dir / job_file, "w") as fh:
       # slurm commands
       lines = (f"""\
