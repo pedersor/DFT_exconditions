@@ -391,6 +391,7 @@ class Functional():
     """
 
     func_id = func_id.lower()
+    self.func_id = func_id
     self.is_combined_xc = '_xc_' in func_id
 
     if self.is_combined_xc:
@@ -721,7 +722,8 @@ class LocalCondChecker():
 
     num_conditions = len(self.conditions_to_check)
     df = {
-        'xc': [self.functional.name] * num_conditions,
+        'xc id': [self.functional.func_id] * num_conditions,
+        'xc label': [self.functional.name] * num_conditions,
         'dfa type': [self.functional.dfa_type] * num_conditions,
         'condition': [None] * num_conditions,
         'satisfied': [None] * num_conditions,
