@@ -484,6 +484,8 @@ class Functional():
           hyb_type == pylibxc.flags.XC_HYB_CAMY or
           hyb_type == pylibxc.flags.XC_HYB_CAMG):
       self.range_sep_hyb = True
+      raise ValueError(f"Functional {libxc_fun._xc_func_name} not supported. \
+          It is a range-separated hybrid.")
     else:
       raise ValueError(f"Functional {libxc_fun._xc_func_name} not supported. \
           It may be a double hybrid or some other unsupported functional.")
@@ -576,12 +578,10 @@ class LocalCondChecker():
     ]
 
     avail_conds = []
-    if self.functional.is_combined_xc and self.functional.range_sep_hyb:
-      avail_conds.extend(c_conds)
-    elif self.functional.is_combined_xc:
+    if self.functional.is_combined_xc:
       avail_conds.extend(c_conds)
       avail_conds.extend(xc_conds)
-    elif self.functional.libxc_fun[0] is None or self.functional.range_sep_hyb:
+    elif self.functional.libxc_fun[0] is None:
       # correlation-only functional or range-separated hybrid
       avail_conds.extend(c_conds)
     elif self.functional.libxc_fun[0] and self.functional.libxc_fun[1]:
