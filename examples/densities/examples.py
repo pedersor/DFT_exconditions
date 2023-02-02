@@ -376,7 +376,7 @@ class GedankenDensity():
 
 class Examples():
 
-  def __init__(self, gedanken_example, s_grids=None):
+  def __init__(self, gedanken_example=None, s_grids=None):
     self.gedanken_example = gedanken_example
 
     # radial grids for plotting
@@ -448,7 +448,7 @@ class Examples():
     mf.kernel()
 
     n_ang_grids = dft.gen_grid._default_ang(nuc=2, level=9)
-    n_rad_grids = 300
+    n_rad_grids = 500
 
     grids = dft.gen_grid.Grids(atom)
     grids.atom_grid = {'He': (n_rad_grids, n_ang_grids)}
@@ -461,7 +461,7 @@ class Examples():
 
     s_grids, g_s = checker.reduced_grad_dist(s_grids=self.s_grids)
 
-    return s_grids, g_s
+    return s_grids, g_s / atom.tot_electrons()
 
   def n_atom_g_s(self) -> Tuple[np.ndarray, np.ndarray]:
     """g(s) of a N atom calculated with PySCF."""
@@ -528,6 +528,59 @@ class Examples():
 
     return s_grids, g_s
 
+  def he2_dimer_g_s(self) -> Tuple[np.ndarray, np.ndarray]:
+    """g(s) of a He_2 dimer calculated with PySCF."""
+
+    he2_dimer = gto.M(
+        atom='He 0 0 0;He 0 0 2.75',
+        basis='aug-pcseg-4',
+        verbose=4,
+    )
+
+    mf = scf.RHF(he2_dimer)
+    #mf.xc = 'PBE'
+    mf.conv_tol_grad = 1e-9
+    mf.kernel()
+
+    n_ang_grids = dft.gen_grid._default_ang(nuc=2, level=9)
+    n_rad_grids = 500
+
+    grids = dft.gen_grid.Grids(he2_dimer)
+    grids.atom_grid = {'He': (n_rad_grids, n_ang_grids)}
+    grids.prune = None
+    grids.build()
+
+    mf.grids = grids
+
+    checker = CondChecker(mf, xc='HF')
+
+    s_grids, g_s = checker.reduced_grad_dist(s_grids=self.s_grids)
+
+    return s_grids, g_s / he2_dimer.tot_electrons()
+
+  def he2_he_compare_g_s(self):
+    he_out = self.he_atom_g_s()
+    he2_out = self.he2_dimer_g_s()
+    g_s_diff = np.abs(he2_out[1] - he_out[1])
+    g_s_diff_int = np.trapz(g_s_diff, he_out[0])
+
+    plt.plot(*he_out, label='He atom')
+    plt.plot(*he2_out, label='He$_2$ dimer')
+    plt.plot(
+        he_out[0],
+        g_s_diff * 40,
+        label=r'40 $\times$ abs. difference:' + '\n He$_2$ and He',
+        zorder=1,
+    )
+
+    plt.legend(loc='upper right')
+    plt.ylim(bottom=0)
+    plt.ylabel('$g(s) / N$')
+    plt.xlabel('$s$')
+    plt.savefig('he2_he_g_s.pdf', bbox_inches='tight')
+    plt.close()
+    return
+
   def combined_examples(self):
     """Combine all examples into one plot."""
 
@@ -537,9 +590,9 @@ class Examples():
     gedanken_out = self.gedanken_example.gedanken_g_s()
 
     # normalize g_s across different systems
+    # Todo: normalize by number of electrons (done for He)
     n_out = (n_out[0], n_out[1] / 7)
     n2_out = (n2_out[0], n2_out[1] / 14)
-    he_out = (he_out[0], he_out[1] / 2)
     gedanken_out = (gedanken_out[0], gedanken_out[1] / 1)
 
     # |g[N2] - g[N]| for differences plot
@@ -619,3 +672,6 @@ if __name__ == '__main__':
 
   # Supp. Material Fig. 1
   gedanken_example.plot_gedanken_ks_potential()
+
+  # He2 dimer example
+  examples.he2_he_compare_g_s()

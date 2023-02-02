@@ -15,7 +15,7 @@ class CondChecker():
       mf: Union[scf.RHF, scf.UHF, dft.RKS, dft.UKS],
       xc: Optional[str] = None,
       gams: Optional[np.ndarray] = np.linspace(0.01, 2),
-  ):
+  ) -> None:
     """
     Initialize CondChecker object.
 
@@ -45,14 +45,16 @@ class CondChecker():
       self.xctype = 'MGGA'
 
     if getattr(mf, 'grids', False):
-      mol_grids = mf.grids
+      rho_grids = mf.grids
     else:
-      mol_grids = dft.gen_grid.Grids(self.mol)
-      mol_grids.level = 6
-      mol_grids.prune = None
-      mol_grids.build()
+      rho_grids = dft.gen_grid.Grids(self.mol)
+      rho_grids.level = 6
+      rho_grids.prune = None
+      rho_grids.build()
 
-    self.weights = mol_grids.weights
+    self.dms = mf.make_rdm1()
+    self.rho_grids = rho_grids
+    self.weights = rho_grids.weights
     self.nelec = np.array(self.mol.nelec, dtype=np.float64)
 
     if self.mol.spin == 0 and self.mol.charge != -1:
@@ -60,19 +62,39 @@ class CondChecker():
     else:
       self.unrestricted = 1
 
-    # setup density (rho)
-    ao_value = numint.eval_ao(self.mol, mol_grids.coords, deriv=2)
-    if not self.unrestricted:
-      dm = mf.make_rdm1()
-      self.rho = numint.eval_rho(self.mol, ao_value, dm, xctype=self.xctype)
-    else:
-      dm_up, dm_dn = mf.make_rdm1()
-      rho_up = numint.eval_rho(self.mol, ao_value, dm_up, xctype=self.xctype)
-      rho_dn = numint.eval_rho(self.mol, ao_value, dm_dn, xctype=self.xctype)
-      self.rho = (rho_up, rho_dn)
-
     # caches
     self._caches = {}
+
+    return
+
+  def block_loop(self, ao_deriv=2) -> Tuple[List[np.ndarray], np.ndarray]:
+    """ Loop over blocks of grids to evaluate rho on."""
+
+    ni = numint.NumInt()
+    if self.xctype == 'MGGA':
+      with_lapl = True
+    else:
+      with_lapl = False
+
+    make_rho, num_dms, nao = ni._gen_rho_evaluator(
+        self.mol,
+        self.dms,
+        hermi=1,
+        with_lapl=with_lapl,
+        grids=self.rho_grids,
+    )
+
+    for ao, mask, weights, coords in ni.block_loop(
+        self.mol,
+        self.rho_grids,
+        nao,
+        ao_deriv,
+    ):
+      rho = []
+      for i in range(num_dms):
+        rho.append(make_rho(i, ao, mask, self.xctype))
+
+      yield rho, weights
 
   def get_cache(self, s: str):
     return self._caches.get(s, None)
@@ -80,14 +102,10 @@ class CondChecker():
   def set_cache(self, s: str, obj) -> None:
     self._caches[s] = obj
 
-  def get_reduced_grad(self) -> np.ndarray:
+  def get_reduced_grad(self, rho: List[np.ndarray]) -> np.ndarray:
     """Obtain reduced gradient on a grid. """
 
-    rho = self.rho
-    if self.unrestricted:
-      # get total density
-      rho = sum(rho)
-
+    rho = sum(rho)
     n = rho[0]
     n_grad = rho[1:4]
     abs_n_grad = np.sum(n_grad**2, axis=0)**(1 / 2)
@@ -105,7 +123,7 @@ class CondChecker():
     
     g_3(s) is defined in:
     
-    Zupan, Ales, et al. "Density‐gradient analysis for density functional 
+    Zupan, Ales, et al. "Density-gradient analysis for density functional 
     theory: Application to atoms." International journal of quantum chemistry 
     61.5 (1997): 835-845.
     https://doi.org/10.1002/(SICI)1097-461X(1997)61:5<835::AID-QUA9>3.0.CO;2-X
@@ -121,58 +139,50 @@ class CondChecker():
       g3_s: g_3(s) evaluated on s_grids.
     """
 
-    rho = self.rho
-    if self.unrestricted:
-      # get total density
-      rho = sum(rho)
-
-    n = rho[0]
+    int_g3_s = np.zeros_like(s_grids)
     s_grids = np.expand_dims(s_grids, axis=1)
-    s = self.get_reduced_grad()
 
-    # avoid numerical problems from small density values
-    mask = n > density_tol
-    n = n[mask]
-    s = s[mask]
-    weights = self.weights[mask]
+    for rho, weights in self.block_loop():
 
-    fermi_dist = 1 / (np.exp(-(s_grids - s) / fermi_temp) + 1)
+      s = self.get_reduced_grad(rho)
+      rho = sum(rho)
+      n = rho[0]
 
-    integrand = np.nan_to_num(n * fermi_dist * weights)
-    int_g3_s = np.sum(integrand, axis=1)
+      # avoid numerical problems from small density values
+      mask = n > density_tol
+      n = n[mask]
+      s = s[mask]
+      weights = weights[mask]
+
+      fermi_dist = 1 / (np.exp(-(s_grids - s) / fermi_temp) + 1)
+
+      int_g3_s += np.sum(n * fermi_dist * weights, axis=1)
 
     s_grids = np.squeeze(s_grids, axis=1)
     g3_s = self.deriv_fn(int_g3_s, s_grids)
 
     return s_grids, g3_s
 
-  def get_scaled_sys(self, gam: float) -> Tuple[np.ndarray, np.ndarray]:
+  def get_scaled_sys(
+      self,
+      rho: List[np.ndarray],
+      weights: np.ndarray,
+      gam: float,
+  ) -> Tuple[np.ndarray, np.ndarray]:
     """Scale density and quadrature weights by \gamma."""
-    if not self.unrestricted:
-      scaled_rho = self.get_scaled_rho(self.rho, gam)
-    else:
-      rho_up, rho_dn = self.rho
-      scaled_rho_up = self.get_scaled_rho(rho_up, gam)
-      scaled_rho_dn = self.get_scaled_rho(rho_dn, gam)
-      scaled_rho = (scaled_rho_up, scaled_rho_dn)
 
-    # scale integral quadrature weights
-    scaled_weights = self.weights / gam**3
+    # scale rho
+    # loop over possible spin channels
+    for rho_i in rho:
+      rho_i[0] = (gam**3) * rho_i[0]
+      rho_i[1:4] = (gam**4) * rho_i[1:4]
+      if rho_i.shape[0] > 4:
+        rho_i[4:] = (gam**5) * rho_i[4:]
 
-    return scaled_rho, scaled_weights
+    # scale quadrature weights
+    scaled_weights = weights / gam**3
 
-  @staticmethod
-  def get_scaled_rho(rho: np.ndarray, gam: float) -> np.ndarray:
-    """ Scale density: \gamma^3 n(\gamma \br) ."""
-
-    # create a copy to prevent modifying the original density
-    scaled_rho = copy.deepcopy(rho)
-    scaled_rho[0] = (gam**3) * scaled_rho[0]
-    scaled_rho[1:4] = (gam**4) * scaled_rho[1:4]
-    if scaled_rho.shape[0] > 4:
-      scaled_rho[4:] = (gam**5) * scaled_rho[4:]
-
-    return scaled_rho
+    return rho, scaled_weights
 
   def get_Ec_gam(self, gam: float, gam_inf=5000) -> float:
     """Obtain the correlation energy E_c[n_\gamma].
@@ -216,18 +226,22 @@ class CondChecker():
   def get_Ex_lda(self, gam: float) -> float:
     """Obtain unpolarized LDA exchange energy for a given gamma."""
 
-    scaled_rho, scaled_weights = self.get_scaled_sys(gam)
-    if self.unrestricted:
-      # run unpolarized LDA calculation
-      scaled_rho = sum(scaled_rho)
-    eps_x = dft.libxc.eval_xc('LDA_X', scaled_rho, spin=0)[0]
+    ex = 0
+    int_nelec = 0
+    for rho, weights in self.block_loop():
 
-    rho = scaled_rho[0]
-    int_nelec = np.einsum('i,i->', rho, scaled_weights)
+      scaled_rho, scaled_weights = self.get_scaled_sys(rho, weights, gam)
+
+      scaled_rho = sum(scaled_rho)
+      eps_x = dft.libxc.eval_xc('LDA_X', scaled_rho, spin=0)[0]
+
+      rho = scaled_rho[0]
+      int_nelec += np.einsum('i,i->', rho, scaled_weights)
+      ex += np.einsum('i,i,i->', eps_x, rho, scaled_weights)
+
+    # check that the number of electrons is conserved
     nelec = np.sum(self.nelec)
     np.testing.assert_allclose(int_nelec, nelec, rtol=1e-03)
-
-    ex = np.einsum('i,i,i->', eps_x, rho, scaled_weights)
 
     return ex
 
@@ -245,7 +259,7 @@ class CondChecker():
       self.set_cache('Ex_lda_gams', ex_gams)
     return ex_gams
 
-  def get_eps_xc(self, xc: str, rho: np.ndarray) -> np.ndarray:
+  def get_eps_xc(self, xc: str, rho: List[np.ndarray]) -> np.ndarray:
     """Obtain exchange-correlation (XC) energy density \epsilon_{xc}[n] for a 
     given density.
     
@@ -257,7 +271,10 @@ class CondChecker():
       eps_xc: XC energy density on a grid with shape (num_density_grids,)
     """
 
-    eps_xc = dft.libxc.eval_xc(xc, rho, spin=self.unrestricted)[0]
+    if self.unrestricted:
+      eps_xc = dft.libxc.eval_xc(xc, rho, spin=self.unrestricted)[0]
+    else:
+      eps_xc = dft.libxc.eval_xc(xc, rho[0], spin=self.unrestricted)[0]
 
     return eps_xc
 
@@ -273,27 +290,29 @@ class CondChecker():
       exc: exchange-correlation energy E_xc[n_\gamma].
     """
 
-    scaled_rho, scaled_weights = self.get_scaled_sys(gam)
-    eps_xc = self.get_eps_xc(xc, scaled_rho)
+    exc = 0
+    int_nelec_up = 0
+    int_nelec_dn = 0
+    for rho, weights in self.block_loop():
 
-    if not self.unrestricted:
-      rho = scaled_rho[0]
-      int_nelec = np.einsum('i,i->', rho, scaled_weights)
-      nelec = np.sum(self.nelec)
-      np.testing.assert_allclose(int_nelec, nelec, rtol=1e-03)
+      scaled_rho, scaled_weights = self.get_scaled_sys(rho, weights, gam)
+      eps_xc = self.get_eps_xc(xc, scaled_rho)
 
-      exc = np.einsum('i,i,i->', eps_xc, rho, scaled_weights)
+      if not self.unrestricted:
+        rho = scaled_rho[0][0]
+        int_nelec = np.einsum('i,i->', rho, scaled_weights)
+        int_nelec_up += int_nelec * 0.5
+        int_nelec_dn += int_nelec * 0.5
+        exc += np.einsum('i,i,i->', eps_xc, rho, scaled_weights)
+      else:
+        rho_up = scaled_rho[0][0]
+        rho_dn = scaled_rho[1][0]
+        int_nelec_up += np.einsum('i,i->', rho_up, scaled_weights)
+        int_nelec_dn += np.einsum('i,i->', rho_dn, scaled_weights)
+        exc += np.einsum('i,i,i->', eps_xc, rho_up + rho_dn, scaled_weights)
 
-    else:
-      rho_up = scaled_rho[0][0]
-      rho_dn = scaled_rho[1][0]
-
-      int_nelec_up = np.einsum('i,i->', rho_up, scaled_weights)
       np.testing.assert_allclose(int_nelec_up, self.nelec[0], rtol=1e-03)
-      int_nelec_dn = np.einsum('i,i->', rho_dn, scaled_weights)
       np.testing.assert_allclose(int_nelec_dn, self.nelec[1], rtol=1e-03)
-
-      exc = np.einsum('i,i,i->', eps_xc, rho_up + rho_dn, scaled_weights)
 
     return exc
 
