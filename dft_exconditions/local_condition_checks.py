@@ -851,7 +851,7 @@ def default_search_variables(func: Functional) -> Dict[str, np.ndarray]:
         's': np.linspace(0, 5, 100),
         'zeta': np.linspace(0, 1, 20),
         'alpha': np.linspace(0, 5, 10),
-        'q': np.linspace(0, 5, 50),
+        'q': np.linspace(-10, 10, 50),
     }
   else:
     raise ValueError(f"functional not supported.")
