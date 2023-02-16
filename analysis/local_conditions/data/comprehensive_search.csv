@@ -520,11 +520,11 @@ gga_c_sg4,SG4,GGA,deriv_lower_bd_check,False,0.047979656,"[0.0011000800080008001
 gga_c_sg4,SG4,GGA,deriv_upper_bd_check_1,False,0.32745005,"[0.005100400040004001, 5.0]","[1.6733466933867736, 5.0]","[0.010101010101010102, 1.0]",,
 gga_c_sg4,SG4,GGA,deriv_upper_bd_check_2,False,0.050204182,"[1.530222412241224, 5.0]","[0.8316633266533066, 3.2464929859719436]","[0.0, 0.5454545454545455]",,
 gga_c_sg4,SG4,GGA,second_deriv_check,False,0.385354778,"[0.0006000400040004001, 4.999499959995999]","[0.4909819639278557, 5.0]","[0.010101010101010102, 1.0]",,
-mgga_c_cs,CS,MGGA,negativity_check,False,0.254535749,"[0.0001, 5.0]","[1.3131313131313131, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-mgga_c_cs,CS,MGGA,deriv_lower_bd_check,False,0.1406814816666666,"[0.0001, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-mgga_c_cs,CS,MGGA,deriv_upper_bd_check_1,False,0.2365330453333333,"[0.17015328442814273, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-mgga_c_cs,CS,MGGA,deriv_upper_bd_check_2,False,0.362860872,"[0.018439079693231077, 5.0]","[1.0606060606060606, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-mgga_c_cs,CS,MGGA,second_deriv_check,False,0.319850777,"[0.0017671890630210072, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
+mgga_c_cs,CS,MGGA,negativity_check,False,0.3516977083333333,"[0.0001, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+mgga_c_cs,CS,MGGA,deriv_lower_bd_check,False,0.1658228023333333,"[0.0001, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+mgga_c_cs,CS,MGGA,deriv_upper_bd_check_1,False,0.2515572423333333,"[0.11180166722240749, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+mgga_c_cs,CS,MGGA,deriv_upper_bd_check_2,False,0.481387703,"[0.015104701567189065, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+mgga_c_cs,CS,MGGA,second_deriv_check,False,0.2750686516666666,"[0.0017671890630210072, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
 gga_xc_th3,TH3,GGA,negativity_check,False,0.217297284,"[0.0001, 5.0]","[0.0, 5.0]","[0.0, 1.0]",,
 gga_xc_th3,TH3,GGA,deriv_lower_bd_check,False,0.781302438,"[0.0001, 4.999499959995999]","[0.0, 5.0]","[0.0, 1.0]",,
 gga_xc_th3,TH3,GGA,deriv_upper_bd_check_1,False,0.216736782,"[0.0001, 5.0]","[0.0, 5.0]","[0.0, 1.0]",,
@@ -632,13 +632,13 @@ hyb_gga_xc_hflyp,HFLYP,HYB_GGA,deriv_upper_bd_check_2,False,0.510747084,"[0.6381
 hyb_gga_xc_hflyp,HFLYP,HYB_GGA,second_deriv_check,False,0.203213848,"[0.0006000400040004001, 3.83740699069907]","[0.0, 5.0]","[0.0, 0.98989898989899]",,
 hyb_gga_xc_hflyp,HFLYP,HYB_GGA,lieb_oxford_bd_check_Uxc,True,0.0,,,,,
 hyb_gga_xc_hflyp,HFLYP,HYB_GGA,lieb_oxford_bd_check_Exc,True,0.0,,,,,
-hyb_mgga_xc_b98,B98,HYB_MGGA,negativity_check,False,0.195921245,"[0.0017671890630210072, 5.0]","[0.050505050505050504, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.7142857142857143, 5.0]"
-hyb_mgga_xc_b98,B98,HYB_MGGA,deriv_lower_bd_check,False,0.0012160376666666,"[0.0001, 0.24017522507502503]","[0.050505050505050504, 5.0]","[0.0, 0.894736842105263]","[0.0, 5.0]","[1.836734693877551, 5.0]"
-hyb_mgga_xc_b98,B98,HYB_MGGA,deriv_upper_bd_check_1,False,0.1299488813333333,"[0.0001, 5.0]","[0.050505050505050504, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.8163265306122449, 5.0]"
-hyb_mgga_xc_b98,B98,HYB_MGGA,deriv_upper_bd_check_2,False,0.14952557,"[0.2118330110036679, 5.0]","[0.050505050505050504, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.8163265306122449, 5.0]"
-hyb_mgga_xc_b98,B98,HYB_MGGA,second_deriv_check,False,0.080500854,"[0.0017671890630210072, 4.998332810936979]","[0.050505050505050504, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.7142857142857143, 5.0]"
-hyb_mgga_xc_b98,B98,HYB_MGGA,lieb_oxford_bd_check_Uxc,True,0.0,,,,,
-hyb_mgga_xc_b98,B98,HYB_MGGA,lieb_oxford_bd_check_Exc,True,0.0,,,,,
+hyb_mgga_xc_br3p86,BR3P86,HYB_MGGA,negativity_check,False,0.2896825,"[0.4052269423141047, 5.0]","[1.2121212121212122, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_br3p86,BR3P86,HYB_MGGA,deriv_lower_bd_check,False,0.336409,"[0.07845788596198734, 4.746587262420807]","[0.8585858585858586, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_br3p86,BR3P86,HYB_MGGA,deriv_upper_bd_check_1,False,0.0049008333333333,"[0.0001, 1.212146448816272]","[4.343434343434343, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_br3p86,BR3P86,HYB_MGGA,deriv_upper_bd_check_2,False,0.3052501666666666,"[0.24350960320106704, 5.0]","[0.5050505050505051, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_br3p86,BR3P86,HYB_MGGA,second_deriv_check,False,0.2468211426666666,"[0.03010940313437813, 3.2444499166388803]","[0.6565656565656566, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_br3p86,BR3P86,HYB_MGGA,lieb_oxford_bd_check_Uxc,False,0.0006363946666666,"[2.255806802267423, 5.0]","[0.0, 1.0606060606060606]","[0.0, 1.0]","[0.0, 4.444444444444445]","[8.367346938775512, 10.0]"
+hyb_mgga_xc_br3p86,BR3P86,HYB_MGGA,lieb_oxford_bd_check_Exc,True,0.0,,,,,
 hyb_mgga_xc_mpw1b95,MPW1B95,HYB_MGGA,negativity_check,True,0.0,,,,,
 hyb_mgga_xc_mpw1b95,MPW1B95,HYB_MGGA,deriv_lower_bd_check,True,0.0,,,,,
 hyb_mgga_xc_mpw1b95,MPW1B95,HYB_MGGA,deriv_upper_bd_check_1,True,0.0,,,,,
@@ -771,6 +771,13 @@ mgga_c_r2scan,R2SCAN,MGGA,deriv_lower_bd_check,True,0.0,,,,,
 mgga_c_r2scan,R2SCAN,MGGA,deriv_upper_bd_check_1,True,0.0,,,,,
 mgga_c_r2scan,R2SCAN,MGGA,deriv_upper_bd_check_2,True,0.0,,,,,
 mgga_c_r2scan,R2SCAN,MGGA,second_deriv_check,True,0.0,,,,,
+hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,negativity_check,False,0.3513820206666667,"[0.0001, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,deriv_lower_bd_check,False,0.166080587,"[0.0001, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,deriv_upper_bd_check_1,False,0.2535402166666666,"[0.09846415471823942, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,deriv_upper_bd_check_2,False,0.4813876643333333,"[0.015104701567189065, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,second_deriv_check,False,0.2756012353333333,"[0.0017671890630210072, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,lieb_oxford_bd_check_Uxc,False,0.012681348,"[0.0001, 5.0]","[0.0, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[7.142857142857142, 10.0]"
+hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,lieb_oxford_bd_check_Exc,False,0.0147000473333333,"[0.0001, 5.0]","[0.0, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[7.95918367346939, 10.0]"
 hyb_gga_xc_wp04,WP04,HYB_GGA,negativity_check,True,0.0,,,,,
 hyb_gga_xc_wp04,WP04,HYB_GGA,deriv_lower_bd_check,True,0.0,,,,,
 hyb_gga_xc_wp04,WP04,HYB_GGA,deriv_upper_bd_check_1,True,0.0,,,,,
@@ -1005,11 +1012,11 @@ hyb_gga_xc_kmlyp,KMLYP,HYB_GGA,deriv_upper_bd_check_2,False,0.278878176,"[0.8496
 hyb_gga_xc_kmlyp,KMLYP,HYB_GGA,second_deriv_check,False,0.053706738,"[0.0116009200920092, 1.250200010001]","[2.8657314629258517, 5.0]","[0.0, 0.888888888888889]",,
 hyb_gga_xc_kmlyp,KMLYP,HYB_GGA,lieb_oxford_bd_check_Uxc,True,0.0,,,,,
 hyb_gga_xc_kmlyp,KMLYP,HYB_GGA,lieb_oxford_bd_check_Exc,True,0.0,,,,,
-mgga_c_b94,B94,MGGA,negativity_check,True,0.0,,,,,
-mgga_c_b94,B94,MGGA,deriv_lower_bd_check,True,0.0,,,,,
-mgga_c_b94,B94,MGGA,deriv_upper_bd_check_1,True,0.0,,,,,
-mgga_c_b94,B94,MGGA,deriv_upper_bd_check_2,True,0.0,,,,,
-mgga_c_b94,B94,MGGA,second_deriv_check,True,0.0,,,,,
+mgga_c_r2scanl,R2SCANL,MGGA,lieb_oxford_bd_check_Uxc,True,0.0,,,,,
+mgga_c_r2scanl,R2SCANL,MGGA,lieb_oxford_bd_check_Exc,True,0.0,,,,,
+mgga_c_r2scanl,R2SCANL,MGGA,negativity_check,True,0.0,,,,,
+mgga_c_r2scanl,R2SCANL,MGGA,deriv_lower_bd_check,True,0.0,,,,,
+mgga_c_r2scanl,R2SCANL,MGGA,deriv_upper_bd_check_1,True,0.0,,,,,
 gga_xc_hcth_407,HCTH-407,GGA,negativity_check,False,0.480769026,"[0.0001, 5.0]","[2.1843687374749496, 5.0]","[0.0, 0.9595959595959597]",,
 gga_xc_hcth_407,HCTH-407,GGA,deriv_lower_bd_check,False,0.38235203,"[0.0001, 4.999499959995999]","[2.214428857715431, 5.0]","[0.0, 0.9595959595959597]",,
 gga_xc_hcth_407,HCTH-407,GGA,deriv_upper_bd_check_1,False,0.364540628,"[0.0001, 5.0]","[2.6152304609218437, 5.0]","[0.0, 0.9191919191919192]",,
@@ -1036,13 +1043,13 @@ hyb_gga_xc_pbe_molb0,PBE-MOLB0,HYB_GGA,deriv_upper_bd_check_2,False,0.004905654,
 hyb_gga_xc_pbe_molb0,PBE-MOLB0,HYB_GGA,second_deriv_check,True,0.0,,,,,
 hyb_gga_xc_pbe_molb0,PBE-MOLB0,HYB_GGA,lieb_oxford_bd_check_Uxc,True,0.0,,,,,
 hyb_gga_xc_pbe_molb0,PBE-MOLB0,HYB_GGA,lieb_oxford_bd_check_Exc,True,0.0,,,,,
-hyb_gga_xc_b3p86_nwchem,B3P86-NWCHEM,HYB_GGA,negativity_check,True,0.0,,,,,
-hyb_gga_xc_b3p86_nwchem,B3P86-NWCHEM,HYB_GGA,deriv_lower_bd_check,True,0.0,,,,,
-hyb_gga_xc_b3p86_nwchem,B3P86-NWCHEM,HYB_GGA,deriv_upper_bd_check_1,True,0.0,,,,,
-hyb_gga_xc_b3p86_nwchem,B3P86-NWCHEM,HYB_GGA,deriv_upper_bd_check_2,False,0.16467509,"[0.6266501250125013, 5.0]","[0.8517034068136272, 5.0]","[0.0, 1.0]",,
-hyb_gga_xc_b3p86_nwchem,B3P86-NWCHEM,HYB_GGA,second_deriv_check,False,0.100504044,"[0.165113201320132, 2.0677654165416546]","[1.5731462925851702, 5.0]","[0.0, 1.0]",,
-hyb_gga_xc_b3p86_nwchem,B3P86-NWCHEM,HYB_GGA,lieb_oxford_bd_check_Uxc,False,0.00623552,"[0.5066405240524052, 5.0]","[4.3086172344689375, 5.0]","[0.0, 1.0]",,
-hyb_gga_xc_b3p86_nwchem,B3P86-NWCHEM,HYB_GGA,lieb_oxford_bd_check_Exc,False,1.6564e-05,"[4.376950155015502, 5.0]","[4.939879759519038, 5.0]","[0.9595959595959597, 1.0]",,
+mgga_c_r2scanl,R2SCANL,MGGA,deriv_upper_bd_check_2,True,0.0,"[0.4052269423141047, 5.0]","[1.2121212121212122, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[-10.0, 10.0]"
+mgga_c_r2scanl,R2SCANL,MGGA,second_deriv_check,True,0.0,"[0.07845788596198734, 4.746587262420807]","[0.8585858585858586, 5.0]","[0.0, 1.0]","[0.0, 5.0]","[-10.0, 10.0]"
+hyb_mgga_xc_b98,B98,HYB_MGGA,negativity_check,False,0.2023206323333333,"[0.0017671890630210072, 5.0]","[0.050505050505050504, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[1.0204081632653068, 10.0]"
+hyb_mgga_xc_b98,B98,HYB_MGGA,deriv_lower_bd_check,False,0.0037481506666666,"[0.0001, 0.468580126708903]","[0.050505050505050504, 5.0]","[0.0, 0.894736842105263]","[0.0, 5.0]","[1.8367346938775508, 10.0]"
+hyb_mgga_xc_b98,B98,HYB_MGGA,deriv_upper_bd_check_1,False,0.1451415256666666,"[0.0001, 5.0]","[0.050505050505050504, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[1.0204081632653068, 10.0]"
+hyb_mgga_xc_b98,B98,HYB_MGGA,deriv_upper_bd_check_2,False,0.1717075846666666,"[0.16015015005001668, 5.0]","[0.050505050505050504, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[1.0204081632653068, 10.0]"
+hyb_mgga_xc_b98,B98,HYB_MGGA,second_deriv_check,False,0.1185101913333333,"[0.0017671890630210072, 4.998332810936979]","[0.050505050505050504, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[1.0204081632653068, 10.0]"
 mgga_xc_tpsslyp1w,TPSSLYP1W,MGGA,negativity_check,False,0.4083055,"[0.0001, 5.0]","[2.1717171717171717, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]",
 mgga_xc_tpsslyp1w,TPSSLYP1W,MGGA,deriv_lower_bd_check,False,0.1792815,"[0.0001, 2.358524524904981]","[2.0707070707070705, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]",
 mgga_xc_tpsslyp1w,TPSSLYP1W,MGGA,deriv_upper_bd_check_1,True,0.0,,,,,
@@ -1365,13 +1372,13 @@ gga_c_hcth_a,HCTH-A,GGA,deriv_lower_bd_check,False,0.289370122,"[0.0001, 4.99949
 gga_c_hcth_a,HCTH-A,GGA,deriv_upper_bd_check_1,False,0.354571438,"[0.0001, 5.0]","[2.50501002004008, 5.0]","[0.0, 0.888888888888889]",,
 gga_c_hcth_a,HCTH-A,GGA,deriv_upper_bd_check_2,False,0.500809378,"[0.006100480048004801, 5.0]","[2.1543086172344688, 5.0]","[0.0, 0.9393939393939394]",,
 gga_c_hcth_a,HCTH-A,GGA,second_deriv_check,False,0.453799678,"[0.0006000400040004001, 4.999499959995999]","[2.1543086172344688, 5.0]","[0.0, 0.9393939393939394]",,
-hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,negativity_check,False,0.2542892303333333,"[0.0001, 5.0]","[1.3131313131313131, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,deriv_lower_bd_check,False,0.1411724443333333,"[0.0001, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,deriv_upper_bd_check_1,False,0.2456633203333333,"[0.15514858286095365, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,deriv_upper_bd_check_2,False,0.3628608363333333,"[0.018439079693231077, 5.0]","[1.0606060606060606, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,second_deriv_check,False,0.320678656,"[0.0017671890630210072, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
-hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,lieb_oxford_bd_check_Uxc,True,0.0,,,,,
-hyb_mgga_xc_edmggah,EDMGGAH,HYB_MGGA,lieb_oxford_bd_check_Exc,True,0.0,,,,,
+hyb_mgga_xc_b98,B98,HYB_MGGA,lieb_oxford_bd_check_Uxc,True,0.0,"[0.0001, 5.0]","[1.3131313131313131, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
+hyb_mgga_xc_b98,B98,HYB_MGGA,lieb_oxford_bd_check_Exc,True,0.0,"[0.0001, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
+mgga_c_b94,B94,MGGA,negativity_check,True,0.0,"[0.15514858286095365, 5.0]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
+mgga_c_b94,B94,MGGA,deriv_lower_bd_check,True,0.0,"[0.018439079693231077, 5.0]","[1.0606060606060606, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
+mgga_c_b94,B94,MGGA,deriv_upper_bd_check_1,True,0.0,"[0.0017671890630210072, 4.998332810936979]","[0.0, 5.0]","[0.0, 0.9473684210526315]","[0.0, 5.0]","[0.0, 5.0]"
+mgga_c_b94,B94,MGGA,deriv_upper_bd_check_2,True,0.0,,,,,
+mgga_c_b94,B94,MGGA,second_deriv_check,True,0.0,,,,,
 gga_c_apbe,APBE,GGA,lieb_oxford_bd_check_Uxc,True,0.0,,,,,
 gga_c_apbe,APBE,GGA,lieb_oxford_bd_check_Exc,True,0.0,,,,,
 gga_c_apbe,APBE,GGA,negativity_check,True,0.0,,,,,
