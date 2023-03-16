@@ -17,7 +17,7 @@ pretty_conds = {
     'ec_scaling_check': '$E_c[n_{\gamma}]$ inequalities',
     'tc_non_negativity': '$T_c$ non-negativity',
     'tc_upper_bound': '$T_c$ upper-bound',
-    'adiabatic_ec_concavity': '$E^{\lambda}_c[n]$ concavity',
+    'adiabatic_ec_concavity': r'$U_{c}(\lambda)$ monotonicity',
     'lieb_oxford_bound_exc': r'Lieb-Oxford bound on $E_{xc}$',
     'lieb_oxford_bound_uxc': r'Lieb-Oxford bound on $U_{xc}$',
 }
@@ -115,3 +115,4 @@ def exact_cond_checks_fig():
 
 if __name__ == '__main__':
   get_ea_err_fig()
+  exact_cond_checks_fig()
