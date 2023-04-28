@@ -7,9 +7,12 @@ from datetime import datetime
 import pylibxc
 import yaml
 
-DEBUG = False
+DEBUG = True
 
 func_types = [
+    'lda_c_',
+    'lda_xc_',
+    'hyb_lda_xc_',
     'gga_c_',
     'gga_xc_',
     'hyb_gga_xc_',
@@ -54,7 +57,7 @@ for func_type in func_types:
 
     job_file = f'{xc_func}.job'
     run_cmd = f'srun python {run_file.name} -f {xc_func} '
-    debug_cmd = ''
+    debug_cmd = f'python3 {run_file.name} -f {xc_func}'
     with open(out_dir / job_file, "w") as fh:
       # slurm commands
       lines = (f"""\
