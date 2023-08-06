@@ -29,5 +29,18 @@ Running the above code produces the outputs `ie_checks_SOGGA11.csv` and `ie_errs
 
 Analysis and visualization over obtained results can be found in `analysis/`. Other code such as `examples/densities/examples.py` is used to reproduce figures that will appear in a forthcoming paper.
 
+## Cite
+
+Please cite this work as:
+
+```
+@article{pederson2023reassessing,
+  title={Reassessing the role of exact conditions in density functional theory},
+  author={Pederson, Ryan and Burke, Kieron},
+  journal={arXiv preprint arXiv:2303.01766},
+  year={2023}
+}
+```
+
 ## Disclaimer
 This library is in *alpha*.
