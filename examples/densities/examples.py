@@ -394,7 +394,7 @@ class Examples():
     he_grids, he_density = self.he_atom_radial_density()
 
     plt.plot(grids, n_g, label='gedanken density', zorder=2)
-    plt.plot(he_grids, he_density / 7, label='He density / 7')
+    plt.plot(he_grids, he_density / 7, "--", label='He density / 7')
     plt.ylabel('$n(r)$')
     plt.xlabel('$r$')
     plt.ylim(bottom=0, top=0.3)
@@ -605,7 +605,7 @@ class Examples():
     plt.plot(*he_out, label='He atom')
     plt.plot(*n_out, label='N atom')
     plt.plot(*n2_out, label='N$_2$ molecule')
-    plt.plot(n_out[0], n2_minus_n, label='abs. difference: \n N$_2$ and N')
+    plt.plot(n_out[0], n2_minus_n, "--", label='abs. difference: \n N$_2$ and N')
 
     plt.legend(loc='upper right')
     plt.xlim(left=s_min, right=s_max)
