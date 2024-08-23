@@ -1,6 +1,13 @@
 A library for checking exact conditions in density functional theory (DFT) approximations.
 ===============================
 
+## Update: 08/23/2024
+
+Vaibhav Khanna et al. 2024 [Examining the Impact of Local Condition Violations on Energy Computations in DFT](https://arxiv.org/abs/2403.14073v1) have found that several local conditions: `deriv_lower_bd_check`, `deriv_upper_bd_check_1`,`deriv_upper_bd_check_2`, and `second_deriv_check` can be sensitive to the number of $r_s$ grids used in evaluations due to the numerical derivates taken with respect to this variable. We suggest users more carefully scan through finer $r_s$ grid meshes until `"fraction violated"` appears converged. In some cases, over $500000$ grids have been required, but this depends on the functional of choice.
+
+Please see `examples/local_conditions/local_conditions_runs_w_update.py` for info on changing
+such values from the default ones used in our paper.
+
 ## Installation (Linux)
 
 Before continuing, a python virtual environment is recommended. To install, use the following example command:

@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple, Dict, Union
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import pylibxc
 
@@ -748,7 +749,7 @@ class LocalCondChecker():
     else:
       s_splits = np.split(s, num_blocks)
 
-    for s_split in s_splits:
+    for s_split in tqdm(s_splits, total=len(s_splits)):
       if s_split is not None:
         std_inp[1] = s_split
 

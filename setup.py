@@ -10,7 +10,7 @@ requirements = [
 
 setup(
     name="dft_exconditions",
-    version="0.0.1",
+    version="0.0.2",
     author="Ryan Pederson",
     author_email="pedersor@uci.edu",
     description="A library for checking exact conditions in DFT approximations.",
